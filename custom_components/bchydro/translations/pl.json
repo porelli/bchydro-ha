@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Skonfiguruj BC Hydro",
+        "description": "Wprowadź dane logowania do konta BC Hydro.",
+        "data": {
+          "username": "Adres e-mail",
+          "password": "Hasło"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ponowna autoryzacja BC Hydro",
+        "description": "Twoja sesja BC Hydro wygasła. Zaloguj się ponownie, aby kontynuować.\n\nNazwa użytkownika: {username}",
+        "data": {
+          "username": "Adres e-mail",
+          "password": "Hasło"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Nieprawidłowa nazwa użytkownika lub hasło. Sprawdź swoje dane logowania.",
+      "captcha_required": "Logowanie nie powiodło się - BC Hydro wyświetliło CAPTCHA. Zwykle oznacza to nieprawidłowe dane logowania lub zbyt wiele prób. Sprawdź hasło i spróbuj ponownie.",
+      "unknown": "Wystąpił nieoczekiwany błąd"
+    },
+    "abort": {
+      "already_configured": "To konto jest już skonfigurowane",
+      "reauth_successful": "Ponowna autoryzacja zakończona pomyślnie"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opcje BC Hydro",
+        "description": "Skonfiguruj opcje integracji BC Hydro.",
+        "data": {
+          "update_interval": "Interwał aktualizacji (minuty)",
+          "historical_days": "Dane historyczne (dni)"
+        },
+        "data_description": {
+          "update_interval": "Jak często pobierać dane z BC Hydro (30-1440 minut). Domyślnie: 60 minut.",
+          "historical_days": "Ile dni danych historycznych zaimportować do Panelu Energii. Domyślnie: 7 dni."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Zużycie do tej pory"
+      },
+      "cost_to_date": {
+        "name": "Koszt do tej pory"
+      },
+      "estimated_consumption": {
+        "name": "Szacowane zużycie"
+      },
+      "estimated_cost": {
+        "name": "Szacowany koszt"
+      },
+      "yesterday_consumption": {
+        "name": "Zużycie wczoraj"
+      },
+      "yesterday_cost": {
+        "name": "Koszt wczoraj"
+      },
+      "rate_plan": {
+        "name": "Plan taryfowy"
+      },
+      "billing_period_start": {
+        "name": "Początek okresu rozliczeniowego"
+      },
+      "days_in_billing_period": {
+        "name": "Dni w okresie rozliczeniowym"
+      },
+      "billing_percentage": {
+        "name": "Postęp okresu rozliczeniowego"
+      }
+    }
+  }
+}

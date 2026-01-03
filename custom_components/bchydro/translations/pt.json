@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurar BC Hydro",
+        "description": "Insira as credenciais da sua conta BC Hydro.",
+        "data": {
+          "username": "Endereço de email",
+          "password": "Senha"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticar BC Hydro",
+        "description": "Sua sessão BC Hydro expirou. Por favor, faça login novamente para continuar.\n\nNome de usuário: {username}",
+        "data": {
+          "username": "Endereço de email",
+          "password": "Senha"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Nome de usuário ou senha inválidos. Por favor, verifique suas credenciais.",
+      "captcha_required": "Falha no login - BC Hydro mostrou um CAPTCHA. Isso geralmente significa credenciais incorretas ou muitas tentativas. Por favor, verifique sua senha e tente novamente.",
+      "unknown": "Ocorreu um erro inesperado"
+    },
+    "abort": {
+      "already_configured": "Esta conta já está configurada",
+      "reauth_successful": "Reautenticação bem-sucedida"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opções BC Hydro",
+        "description": "Configure as opções da integração BC Hydro.",
+        "data": {
+          "update_interval": "Intervalo de atualização (minutos)",
+          "historical_days": "Dados históricos (dias)"
+        },
+        "data_description": {
+          "update_interval": "Frequência de busca de dados do BC Hydro (30-1440 minutos). Padrão: 60 minutos.",
+          "historical_days": "Quantos dias de dados históricos importar para o Painel de Energia. Padrão: 7 dias."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Consumo até a data"
+      },
+      "cost_to_date": {
+        "name": "Custo até a data"
+      },
+      "estimated_consumption": {
+        "name": "Consumo estimado"
+      },
+      "estimated_cost": {
+        "name": "Custo estimado"
+      },
+      "yesterday_consumption": {
+        "name": "Consumo de ontem"
+      },
+      "yesterday_cost": {
+        "name": "Custo de ontem"
+      },
+      "rate_plan": {
+        "name": "Plano tarifário"
+      },
+      "billing_period_start": {
+        "name": "Início do período de faturamento"
+      },
+      "days_in_billing_period": {
+        "name": "Dias no período de faturamento"
+      },
+      "billing_percentage": {
+        "name": "Progresso do período de faturamento"
+      }
+    }
+  }
+}

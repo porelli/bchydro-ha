@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up BC Hydro",
+        "description": "Enter your BC Hydro account credentials.",
+        "data": {
+          "username": "Email Address",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate BC Hydro",
+        "description": "Your BC Hydro session has expired. Please log in again to continue.\n\nUsername: {username}",
+        "data": {
+          "username": "Email Address",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid username or password. Please check your credentials.",
+      "captcha_required": "Login failed - BC Hydro showed a CAPTCHA. This usually means wrong credentials or too many attempts. Please verify your password and try again.",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This account is already configured",
+      "reauth_successful": "Re-authentication successful"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BC Hydro Options",
+        "description": "Configure BC Hydro integration options.",
+        "data": {
+          "update_interval": "Update interval (minutes)",
+          "historical_days": "Historical data (days)"
+        },
+        "data_description": {
+          "update_interval": "How often to fetch data from BC Hydro (30-1440 minutes). Default: 60 minutes.",
+          "historical_days": "How many days of historical data to import for the Energy Dashboard. Default: 7 days."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Consumption to date"
+      },
+      "cost_to_date": {
+        "name": "Cost to date"
+      },
+      "estimated_consumption": {
+        "name": "Estimated consumption"
+      },
+      "estimated_cost": {
+        "name": "Estimated cost"
+      },
+      "yesterday_consumption": {
+        "name": "Yesterday consumption"
+      },
+      "yesterday_cost": {
+        "name": "Yesterday cost"
+      },
+      "rate_plan": {
+        "name": "Rate plan"
+      },
+      "billing_period_start": {
+        "name": "Billing period start"
+      },
+      "days_in_billing_period": {
+        "name": "Days in billing period"
+      },
+      "billing_percentage": {
+        "name": "Billing period progress"
+      }
+    }
+  }
+}

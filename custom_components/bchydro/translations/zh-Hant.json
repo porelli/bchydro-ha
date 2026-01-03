@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "設定 BC Hydro",
+        "description": "請輸入您的 BC Hydro 帳戶憑據。",
+        "data": {
+          "username": "電子郵件",
+          "password": "密碼"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新驗證 BC Hydro",
+        "description": "您的 BC Hydro 工作階段已過期。請重新登入以繼續。\n\n使用者名稱：{username}",
+        "data": {
+          "username": "電子郵件",
+          "password": "密碼"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "使用者名稱或密碼無效。請檢查您的憑據。",
+      "captcha_required": "登入失敗 - BC Hydro 顯示了驗證碼。這通常表示憑據錯誤或嘗試次數過多。請驗證您的密碼並重試。",
+      "unknown": "發生意外錯誤"
+    },
+    "abort": {
+      "already_configured": "此帳戶已設定",
+      "reauth_successful": "重新驗證成功"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BC Hydro 選項",
+        "description": "設定 BC Hydro 整合選項。",
+        "data": {
+          "update_interval": "更新間隔（分鐘）",
+          "historical_days": "歷史資料（天）"
+        },
+        "data_description": {
+          "update_interval": "從 BC Hydro 取得資料的頻率（30-1440 分鐘）。預設：60 分鐘。",
+          "historical_days": "為能源儀表板匯入多少天的歷史資料。預設：7 天。"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "目前消耗量"
+      },
+      "cost_to_date": {
+        "name": "目前費用"
+      },
+      "estimated_consumption": {
+        "name": "預估消耗量"
+      },
+      "estimated_cost": {
+        "name": "預估費用"
+      },
+      "yesterday_consumption": {
+        "name": "昨日消耗量"
+      },
+      "yesterday_cost": {
+        "name": "昨日費用"
+      },
+      "rate_plan": {
+        "name": "費率方案"
+      },
+      "billing_period_start": {
+        "name": "帳單週期開始"
+      },
+      "days_in_billing_period": {
+        "name": "帳單週期天數"
+      },
+      "billing_percentage": {
+        "name": "帳單週期進度"
+      }
+    }
+  }
+}

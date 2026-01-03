@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BC Hydro instellen",
+        "description": "Voer uw BC Hydro-accountgegevens in.",
+        "data": {
+          "username": "E-mailadres",
+          "password": "Wachtwoord"
+        }
+      },
+      "reauth_confirm": {
+        "title": "BC Hydro opnieuw verifiëren",
+        "description": "Uw BC Hydro-sessie is verlopen. Log opnieuw in om door te gaan.\n\nGebruikersnaam: {username}",
+        "data": {
+          "username": "E-mailadres",
+          "password": "Wachtwoord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ongeldige gebruikersnaam of wachtwoord. Controleer uw gegevens.",
+      "captcha_required": "Inloggen mislukt - BC Hydro toonde een CAPTCHA. Dit betekent meestal onjuiste gegevens of te veel pogingen. Controleer uw wachtwoord en probeer het opnieuw.",
+      "unknown": "Er is een onverwachte fout opgetreden"
+    },
+    "abort": {
+      "already_configured": "Dit account is al geconfigureerd",
+      "reauth_successful": "Herauthenticatie geslaagd"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BC Hydro-opties",
+        "description": "Configureer BC Hydro-integratieopties.",
+        "data": {
+          "update_interval": "Update-interval (minuten)",
+          "historical_days": "Historische gegevens (dagen)"
+        },
+        "data_description": {
+          "update_interval": "Hoe vaak gegevens van BC Hydro worden opgehaald (30-1440 minuten). Standaard: 60 minuten.",
+          "historical_days": "Hoeveel dagen historische gegevens te importeren voor het Energie Dashboard. Standaard: 7 dagen."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Verbruik tot nu toe"
+      },
+      "cost_to_date": {
+        "name": "Kosten tot nu toe"
+      },
+      "estimated_consumption": {
+        "name": "Geschat verbruik"
+      },
+      "estimated_cost": {
+        "name": "Geschatte kosten"
+      },
+      "yesterday_consumption": {
+        "name": "Verbruik gisteren"
+      },
+      "yesterday_cost": {
+        "name": "Kosten gisteren"
+      },
+      "rate_plan": {
+        "name": "Tariefplan"
+      },
+      "billing_period_start": {
+        "name": "Start factureringsperiode"
+      },
+      "days_in_billing_period": {
+        "name": "Dagen in factureringsperiode"
+      },
+      "billing_percentage": {
+        "name": "Voortgang factureringsperiode"
+      }
+    }
+  }
+}

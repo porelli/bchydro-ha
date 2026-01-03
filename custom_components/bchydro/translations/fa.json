@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "راه‌اندازی BC Hydro",
+        "description": "اطلاعات حساب BC Hydro خود را وارد کنید.",
+        "data": {
+          "username": "آدرس ایمیل",
+          "password": "رمز عبور"
+        }
+      },
+      "reauth_confirm": {
+        "title": "احراز هویت مجدد BC Hydro",
+        "description": "نشست BC Hydro شما منقضی شده است. لطفاً برای ادامه دوباره وارد شوید.\n\nنام کاربری: {username}",
+        "data": {
+          "username": "آدرس ایمیل",
+          "password": "رمز عبور"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "نام کاربری یا رمز عبور نامعتبر است. لطفاً اطلاعات خود را بررسی کنید.",
+      "captcha_required": "ورود ناموفق - BC Hydro کپچا نمایش داد. این معمولاً به معنای اطلاعات نادرست یا تلاش‌های زیاد است. لطفاً رمز عبور خود را بررسی کرده و دوباره تلاش کنید.",
+      "unknown": "خطای غیرمنتظره رخ داد"
+    },
+    "abort": {
+      "already_configured": "این حساب قبلاً پیکربندی شده است",
+      "reauth_successful": "احراز هویت مجدد موفق بود"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "گزینه‌های BC Hydro",
+        "description": "گزینه‌های یکپارچه‌سازی BC Hydro را پیکربندی کنید.",
+        "data": {
+          "update_interval": "فاصله به‌روزرسانی (دقیقه)",
+          "historical_days": "داده‌های تاریخی (روز)"
+        },
+        "data_description": {
+          "update_interval": "هر چند وقت یکبار داده‌ها از BC Hydro دریافت شوند (۳۰-۱۴۴۰ دقیقه). پیش‌فرض: ۶۰ دقیقه.",
+          "historical_days": "چند روز داده تاریخی برای داشبورد انرژی وارد شود. پیش‌فرض: ۷ روز."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "مصرف تا کنون"
+      },
+      "cost_to_date": {
+        "name": "هزینه تا کنون"
+      },
+      "estimated_consumption": {
+        "name": "مصرف تخمینی"
+      },
+      "estimated_cost": {
+        "name": "هزینه تخمینی"
+      },
+      "yesterday_consumption": {
+        "name": "مصرف دیروز"
+      },
+      "yesterday_cost": {
+        "name": "هزینه دیروز"
+      },
+      "rate_plan": {
+        "name": "طرح تعرفه"
+      },
+      "billing_period_start": {
+        "name": "شروع دوره صورتحساب"
+      },
+      "days_in_billing_period": {
+        "name": "روزهای دوره صورتحساب"
+      },
+      "billing_percentage": {
+        "name": "پیشرفت دوره صورتحساب"
+      }
+    }
+  }
+}

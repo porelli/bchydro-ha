@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BC Hydro 설정",
+        "description": "BC Hydro 계정 정보를 입력하세요.",
+        "data": {
+          "username": "이메일 주소",
+          "password": "비밀번호"
+        }
+      },
+      "reauth_confirm": {
+        "title": "BC Hydro 재인증",
+        "description": "BC Hydro 세션이 만료되었습니다. 계속하려면 다시 로그인하세요.\n\n사용자 이름: {username}",
+        "data": {
+          "username": "이메일 주소",
+          "password": "비밀번호"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "잘못된 사용자 이름 또는 비밀번호입니다. 자격 증명을 확인하세요.",
+      "captcha_required": "로그인 실패 - BC Hydro에서 CAPTCHA를 표시했습니다. 이는 보통 잘못된 자격 증명이나 너무 많은 시도를 의미합니다. 비밀번호를 확인하고 다시 시도하세요.",
+      "unknown": "예기치 않은 오류가 발생했습니다"
+    },
+    "abort": {
+      "already_configured": "이 계정은 이미 구성되어 있습니다",
+      "reauth_successful": "재인증 성공"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BC Hydro 옵션",
+        "description": "BC Hydro 통합 옵션을 구성합니다.",
+        "data": {
+          "update_interval": "업데이트 간격 (분)",
+          "historical_days": "과거 데이터 (일)"
+        },
+        "data_description": {
+          "update_interval": "BC Hydro에서 데이터를 가져오는 빈도 (30-1440분). 기본값: 60분.",
+          "historical_days": "에너지 대시보드에 가져올 과거 데이터 일수. 기본값: 7일."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "현재까지 소비량"
+      },
+      "cost_to_date": {
+        "name": "현재까지 비용"
+      },
+      "estimated_consumption": {
+        "name": "예상 소비량"
+      },
+      "estimated_cost": {
+        "name": "예상 비용"
+      },
+      "yesterday_consumption": {
+        "name": "어제 소비량"
+      },
+      "yesterday_cost": {
+        "name": "어제 비용"
+      },
+      "rate_plan": {
+        "name": "요금제"
+      },
+      "billing_period_start": {
+        "name": "청구 기간 시작"
+      },
+      "days_in_billing_period": {
+        "name": "청구 기간 일수"
+      },
+      "billing_percentage": {
+        "name": "청구 기간 진행률"
+      }
+    }
+  }
+}

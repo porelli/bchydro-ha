@@ -1,0 +1,15 @@
+{
+  "domain": "bchydro",
+  "name": "BC Hydro",
+  "after_dependencies": ["recorder"],
+  "codeowners": ["@porelli"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/porelli/bchydro-ha",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/porelli/bchydro-ha/issues",
+  "quality_scale": "platinum",
+  "requirements": ["beautifulsoup4==4.12.3"],
+  "version": "0.0.1"
+}

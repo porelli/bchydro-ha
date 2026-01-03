@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BC Hydro ਸੈੱਟਅੱਪ ਕਰੋ",
+        "description": "ਆਪਣੇ BC Hydro ਖਾਤੇ ਦੇ ਵੇਰਵੇ ਦਰਜ ਕਰੋ।",
+        "data": {
+          "username": "ਈਮੇਲ ਪਤਾ",
+          "password": "ਪਾਸਵਰਡ"
+        }
+      },
+      "reauth_confirm": {
+        "title": "BC Hydro ਮੁੜ-ਪ੍ਰਮਾਣਿਤ ਕਰੋ",
+        "description": "ਤੁਹਾਡਾ BC Hydro ਸੈਸ਼ਨ ਖਤਮ ਹੋ ਗਿਆ ਹੈ। ਜਾਰੀ ਰੱਖਣ ਲਈ ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਲੌਗਇਨ ਕਰੋ।\n\nਯੂਜ਼ਰਨੇਮ: {username}",
+        "data": {
+          "username": "ਈਮੇਲ ਪਤਾ",
+          "password": "ਪਾਸਵਰਡ"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "ਗਲਤ ਯੂਜ਼ਰਨੇਮ ਜਾਂ ਪਾਸਵਰਡ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੇ ਵੇਰਵੇ ਜਾਂਚੋ।",
+      "captcha_required": "ਲੌਗਇਨ ਅਸਫਲ - BC Hydro ਨੇ CAPTCHA ਦਿਖਾਇਆ। ਇਹ ਆਮ ਤੌਰ 'ਤੇ ਗਲਤ ਵੇਰਵਿਆਂ ਜਾਂ ਬਹੁਤ ਸਾਰੀਆਂ ਕੋਸ਼ਿਸ਼ਾਂ ਦਾ ਮਤਲਬ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਪਾਸਵਰਡ ਜਾਂਚੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+      "unknown": "ਅਣਕਿਆਸੀ ਗਲਤੀ ਆਈ"
+    },
+    "abort": {
+      "already_configured": "ਇਹ ਖਾਤਾ ਪਹਿਲਾਂ ਹੀ ਸੈੱਟਅੱਪ ਹੈ",
+      "reauth_successful": "ਮੁੜ-ਪ੍ਰਮਾਣਿਕਤਾ ਸਫਲ"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BC Hydro ਵਿਕਲਪ",
+        "description": "BC Hydro ਇੰਟੀਗ੍ਰੇਸ਼ਨ ਵਿਕਲਪ ਸੈੱਟ ਕਰੋ।",
+        "data": {
+          "update_interval": "ਅੱਪਡੇਟ ਅੰਤਰਾਲ (ਮਿੰਟ)",
+          "historical_days": "ਪੁਰਾਣਾ ਡਾਟਾ (ਦਿਨ)"
+        },
+        "data_description": {
+          "update_interval": "BC Hydro ਤੋਂ ਡਾਟਾ ਲੈਣ ਦੀ ਬਾਰੰਬਾਰਤਾ (30-1440 ਮਿੰਟ)। ਡਿਫੌਲਟ: 60 ਮਿੰਟ।",
+          "historical_days": "ਊਰਜਾ ਡੈਸ਼ਬੋਰਡ ਲਈ ਕਿੰਨੇ ਦਿਨਾਂ ਦਾ ਪੁਰਾਣਾ ਡਾਟਾ ਲਿਆਉਣਾ ਹੈ। ਡਿਫੌਲਟ: 7 ਦਿਨ।"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "ਹੁਣ ਤੱਕ ਦੀ ਖਪਤ"
+      },
+      "cost_to_date": {
+        "name": "ਹੁਣ ਤੱਕ ਦਾ ਖਰਚਾ"
+      },
+      "estimated_consumption": {
+        "name": "ਅਨੁਮਾਨਿਤ ਖਪਤ"
+      },
+      "estimated_cost": {
+        "name": "ਅਨੁਮਾਨਿਤ ਖਰਚਾ"
+      },
+      "yesterday_consumption": {
+        "name": "ਕੱਲ੍ਹ ਦੀ ਖਪਤ"
+      },
+      "yesterday_cost": {
+        "name": "ਕੱਲ੍ਹ ਦਾ ਖਰਚਾ"
+      },
+      "rate_plan": {
+        "name": "ਰੇਟ ਯੋਜਨਾ"
+      },
+      "billing_period_start": {
+        "name": "ਬਿਲਿੰਗ ਮਿਆਦ ਸ਼ੁਰੂ"
+      },
+      "days_in_billing_period": {
+        "name": "ਬਿਲਿੰਗ ਮਿਆਦ ਵਿੱਚ ਦਿਨ"
+      },
+      "billing_percentage": {
+        "name": "ਬਿਲਿੰਗ ਮਿਆਦ ਦੀ ਪ੍ਰਗਤੀ"
+      }
+    }
+  }
+}

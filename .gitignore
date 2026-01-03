@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+
+# Test files
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Debug files
+debug_*.py
+*.har
+CLUES.md
+
+# Dev documentation (not needed for distribution)
+COMPARISON.md
+IMPROVEMENTS.md
+PLATINUM_READY.md
+QUALITY_SCALE.md
+TESTING_STATUS.md
+ENERGY_DASHBOARD.md
+get_fresh_cookies.md
+
+# Test scripts
+test_*.py
+!tests/test_*.py
+!custom_components/**/test_*.py
+
+# Dev config
+mypy.ini
+pytest.ini
+requirements-dev.txt
+.tool-versions
+
+# OS
+.DS_Store
+Thumbs.db

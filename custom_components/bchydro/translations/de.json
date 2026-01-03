@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BC Hydro einrichten",
+        "description": "Geben Sie Ihre BC Hydro-Kontodaten ein.",
+        "data": {
+          "username": "E-Mail-Adresse",
+          "password": "Passwort"
+        }
+      },
+      "reauth_confirm": {
+        "title": "BC Hydro erneut authentifizieren",
+        "description": "Ihre BC Hydro-Sitzung ist abgelaufen. Bitte melden Sie sich erneut an, um fortzufahren.\n\nBenutzername: {username}",
+        "data": {
+          "username": "E-Mail-Adresse",
+          "password": "Passwort"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ungültiger Benutzername oder Passwort. Bitte überprüfen Sie Ihre Anmeldedaten.",
+      "captcha_required": "Anmeldung fehlgeschlagen - BC Hydro hat ein CAPTCHA angezeigt. Dies bedeutet normalerweise falsche Anmeldedaten oder zu viele Versuche. Bitte überprüfen Sie Ihr Passwort und versuchen Sie es erneut.",
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten"
+    },
+    "abort": {
+      "already_configured": "Dieses Konto ist bereits konfiguriert",
+      "reauth_successful": "Erneute Authentifizierung erfolgreich"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BC Hydro-Optionen",
+        "description": "BC Hydro-Integrationsoptionen konfigurieren.",
+        "data": {
+          "update_interval": "Aktualisierungsintervall (Minuten)",
+          "historical_days": "Historische Daten (Tage)"
+        },
+        "data_description": {
+          "update_interval": "Wie oft Daten von BC Hydro abgerufen werden (30-1440 Minuten). Standard: 60 Minuten.",
+          "historical_days": "Wie viele Tage historischer Daten für das Energie-Dashboard importiert werden sollen. Standard: 7 Tage."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Bisheriger Verbrauch"
+      },
+      "cost_to_date": {
+        "name": "Bisherige Kosten"
+      },
+      "estimated_consumption": {
+        "name": "Geschätzter Verbrauch"
+      },
+      "estimated_cost": {
+        "name": "Geschätzte Kosten"
+      },
+      "yesterday_consumption": {
+        "name": "Verbrauch gestern"
+      },
+      "yesterday_cost": {
+        "name": "Kosten gestern"
+      },
+      "rate_plan": {
+        "name": "Tarifplan"
+      },
+      "billing_period_start": {
+        "name": "Abrechnungszeitraum Beginn"
+      },
+      "days_in_billing_period": {
+        "name": "Tage im Abrechnungszeitraum"
+      },
+      "billing_percentage": {
+        "name": "Abrechnungszeitraum Fortschritt"
+      }
+    }
+  }
+}

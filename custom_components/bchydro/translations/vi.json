@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Thiết lập BC Hydro",
+        "description": "Nhập thông tin đăng nhập tài khoản BC Hydro của bạn.",
+        "data": {
+          "username": "Địa chỉ email",
+          "password": "Mật khẩu"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Xác thực lại BC Hydro",
+        "description": "Phiên BC Hydro của bạn đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.\n\nTên đăng nhập: {username}",
+        "data": {
+          "username": "Địa chỉ email",
+          "password": "Mật khẩu"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng kiểm tra thông tin đăng nhập của bạn.",
+      "captcha_required": "Đăng nhập thất bại - BC Hydro hiển thị CAPTCHA. Điều này thường có nghĩa là thông tin đăng nhập sai hoặc quá nhiều lần thử. Vui lòng kiểm tra mật khẩu và thử lại.",
+      "unknown": "Đã xảy ra lỗi không mong muốn"
+    },
+    "abort": {
+      "already_configured": "Tài khoản này đã được cấu hình",
+      "reauth_successful": "Xác thực lại thành công"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tùy chọn BC Hydro",
+        "description": "Cấu hình các tùy chọn tích hợp BC Hydro.",
+        "data": {
+          "update_interval": "Khoảng thời gian cập nhật (phút)",
+          "historical_days": "Dữ liệu lịch sử (ngày)"
+        },
+        "data_description": {
+          "update_interval": "Tần suất lấy dữ liệu từ BC Hydro (30-1440 phút). Mặc định: 60 phút.",
+          "historical_days": "Số ngày dữ liệu lịch sử cần nhập cho Bảng điều khiển Năng lượng. Mặc định: 7 ngày."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Tiêu thụ đến nay"
+      },
+      "cost_to_date": {
+        "name": "Chi phí đến nay"
+      },
+      "estimated_consumption": {
+        "name": "Tiêu thụ ước tính"
+      },
+      "estimated_cost": {
+        "name": "Chi phí ước tính"
+      },
+      "yesterday_consumption": {
+        "name": "Tiêu thụ hôm qua"
+      },
+      "yesterday_cost": {
+        "name": "Chi phí hôm qua"
+      },
+      "rate_plan": {
+        "name": "Gói cước"
+      },
+      "billing_period_start": {
+        "name": "Bắt đầu kỳ thanh toán"
+      },
+      "days_in_billing_period": {
+        "name": "Số ngày trong kỳ thanh toán"
+      },
+      "billing_percentage": {
+        "name": "Tiến độ kỳ thanh toán"
+      }
+    }
+  }
+}

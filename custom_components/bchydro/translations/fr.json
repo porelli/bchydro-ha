@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurer BC Hydro",
+        "description": "Entrez les identifiants de votre compte BC Hydro.",
+        "data": {
+          "username": "Adresse courriel",
+          "password": "Mot de passe"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Réauthentifier BC Hydro",
+        "description": "Votre session BC Hydro a expiré. Veuillez vous reconnecter pour continuer.\n\nNom d'utilisateur : {username}",
+        "data": {
+          "username": "Adresse courriel",
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Nom d'utilisateur ou mot de passe invalide. Veuillez vérifier vos identifiants.",
+      "captcha_required": "Échec de connexion - BC Hydro a affiché un CAPTCHA. Cela signifie généralement des identifiants incorrects ou trop de tentatives. Veuillez vérifier votre mot de passe et réessayer.",
+      "unknown": "Une erreur inattendue s'est produite"
+    },
+    "abort": {
+      "already_configured": "Ce compte est déjà configuré",
+      "reauth_successful": "Réauthentification réussie"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options BC Hydro",
+        "description": "Configurez les options de l'intégration BC Hydro.",
+        "data": {
+          "update_interval": "Intervalle de mise à jour (minutes)",
+          "historical_days": "Données historiques (jours)"
+        },
+        "data_description": {
+          "update_interval": "Fréquence de récupération des données de BC Hydro (30-1440 minutes). Par défaut : 60 minutes.",
+          "historical_days": "Nombre de jours de données historiques à importer pour le tableau de bord Énergie. Par défaut : 7 jours."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Consommation à ce jour"
+      },
+      "cost_to_date": {
+        "name": "Coût à ce jour"
+      },
+      "estimated_consumption": {
+        "name": "Consommation estimée"
+      },
+      "estimated_cost": {
+        "name": "Coût estimé"
+      },
+      "yesterday_consumption": {
+        "name": "Consommation d'hier"
+      },
+      "yesterday_cost": {
+        "name": "Coût d'hier"
+      },
+      "rate_plan": {
+        "name": "Plan tarifaire"
+      },
+      "billing_period_start": {
+        "name": "Début de la période de facturation"
+      },
+      "days_in_billing_period": {
+        "name": "Jours dans la période de facturation"
+      },
+      "billing_percentage": {
+        "name": "Progression de la période de facturation"
+      }
+    }
+  }
+}

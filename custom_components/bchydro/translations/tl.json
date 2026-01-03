@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "I-setup ang BC Hydro",
+        "description": "Ilagay ang iyong mga kredensyal ng account sa BC Hydro.",
+        "data": {
+          "username": "Email Address",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Muling I-authenticate ang BC Hydro",
+        "description": "Nag-expire na ang iyong sesyon sa BC Hydro. Mangyaring mag-log in muli upang magpatuloy.\n\nUsername: {username}",
+        "data": {
+          "username": "Email Address",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Hindi wastong username o password. Pakisuri ang iyong mga kredensyal.",
+      "captcha_required": "Nabigo ang pag-login - Nagpakita ng CAPTCHA ang BC Hydro. Karaniwang ibig sabihin nito ay maling kredensyal o masyadong maraming pagtatangka. Pakisuri ang iyong password at subukang muli.",
+      "unknown": "May hindi inaasahang error na naganap"
+    },
+    "abort": {
+      "already_configured": "Naka-configure na ang account na ito",
+      "reauth_successful": "Matagumpay ang muling pag-authenticate"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Mga Opsyon ng BC Hydro",
+        "description": "I-configure ang mga opsyon ng integrasyon ng BC Hydro.",
+        "data": {
+          "update_interval": "Pagitan ng pag-update (minuto)",
+          "historical_days": "Makasaysayang datos (araw)"
+        },
+        "data_description": {
+          "update_interval": "Gaano kadalas kumuha ng datos mula sa BC Hydro (30-1440 minuto). Default: 60 minuto.",
+          "historical_days": "Ilang araw ng makasaysayang datos ang i-import para sa Energy Dashboard. Default: 7 araw."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "Konsumo hanggang ngayon"
+      },
+      "cost_to_date": {
+        "name": "Gastos hanggang ngayon"
+      },
+      "estimated_consumption": {
+        "name": "Tinatayang konsumo"
+      },
+      "estimated_cost": {
+        "name": "Tinatayang gastos"
+      },
+      "yesterday_consumption": {
+        "name": "Konsumo kahapon"
+      },
+      "yesterday_cost": {
+        "name": "Gastos kahapon"
+      },
+      "rate_plan": {
+        "name": "Plano ng singil"
+      },
+      "billing_period_start": {
+        "name": "Simula ng panahon ng pagsingil"
+      },
+      "days_in_billing_period": {
+        "name": "Mga araw sa panahon ng pagsingil"
+      },
+      "billing_percentage": {
+        "name": "Progreso ng panahon ng pagsingil"
+      }
+    }
+  }
+}

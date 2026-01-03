@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Update manifest version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update manifest version
+        run: |
+          version="${{ github.event.release.tag_name }}"
+          version="${version#v}"  # Remove 'v' prefix if present
+          jq --arg version "$version" '.version = $version' \
+            custom_components/bchydro/manifest.json > tmp.json
+          mv tmp.json custom_components/bchydro/manifest.json
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add custom_components/bchydro/manifest.json
+          git commit -m "Update version to ${{ github.event.release.tag_name }}"
+          git push origin HEAD:main

@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "设置 BC Hydro",
+        "description": "请输入您的 BC Hydro 账户凭据。",
+        "data": {
+          "username": "电子邮箱",
+          "password": "密码"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新验证 BC Hydro",
+        "description": "您的 BC Hydro 会话已过期。请重新登录以继续。\n\n用户名：{username}",
+        "data": {
+          "username": "电子邮箱",
+          "password": "密码"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "用户名或密码无效。请检查您的凭据。",
+      "captcha_required": "登录失败 - BC Hydro 显示了验证码。这通常意味着凭据错误或尝试次数过多。请验证您的密码并重试。",
+      "unknown": "发生意外错误"
+    },
+    "abort": {
+      "already_configured": "此账户已配置",
+      "reauth_successful": "重新验证成功"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BC Hydro 选项",
+        "description": "配置 BC Hydro 集成选项。",
+        "data": {
+          "update_interval": "更新间隔（分钟）",
+          "historical_days": "历史数据（天）"
+        },
+        "data_description": {
+          "update_interval": "从 BC Hydro 获取数据的频率（30-1440 分钟）。默认：60 分钟。",
+          "historical_days": "为能源仪表板导入多少天的历史数据。默认：7 天。"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_to_date": {
+        "name": "当前消耗量"
+      },
+      "cost_to_date": {
+        "name": "当前费用"
+      },
+      "estimated_consumption": {
+        "name": "预计消耗量"
+      },
+      "estimated_cost": {
+        "name": "预计费用"
+      },
+      "yesterday_consumption": {
+        "name": "昨日消耗量"
+      },
+      "yesterday_cost": {
+        "name": "昨日费用"
+      },
+      "rate_plan": {
+        "name": "费率计划"
+      },
+      "billing_period_start": {
+        "name": "账单周期开始"
+      },
+      "days_in_billing_period": {
+        "name": "账单周期天数"
+      },
+      "billing_percentage": {
+        "name": "账单周期进度"
+      }
+    }
+  }
+}
