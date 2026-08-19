@@ -9,6 +9,17 @@
           "password": "Password"
         }
       },
+      "account": {
+        "title": "Scegli l'account BC Hydro",
+        "description": "Le tue credenziali BC Hydro ({username}) hanno accesso a più di un account. Scegli quello da seguire in Home Assistant.",
+        "data": {
+          "account_id": "Account",
+          "account_name": "Nome per questo account"
+        },
+        "data_description": {
+          "account_name": "Usato per i nomi del dispositivo e delle entità, ad es. \"Casa\" o \"Baita\". Lascia invariato per usare il numero di conto."
+        }
+      },
       "reauth_confirm": {
         "title": "Riautentica BC Hydro",
         "description": "La tua sessione BC Hydro è scaduta. Effettua nuovamente l'accesso per continuare.\n\nNome utente: {username}",
@@ -21,11 +32,14 @@
     "error": {
       "invalid_auth": "Nome utente o password non validi. Verifica le tue credenziali.",
       "captcha_required": "Accesso fallito - BC Hydro ha mostrato un CAPTCHA. Di solito significa credenziali errate o troppi tentativi. Verifica la tua password e riprova.",
-      "unknown": "Si è verificato un errore imprevisto"
+      "cannot_connect": "Impossibile connettersi a BC Hydro. Il servizio potrebbe essere temporaneamente non disponibile: riprova.",
+      "unknown": "Si è verificato un errore imprevisto",
+      "name_in_use": "Quel nome è già usato da un altro account BC Hydro. Scegline un altro."
     },
     "abort": {
       "already_configured": "Questo account è già configurato",
-      "reauth_successful": "Riautenticazione completata con successo"
+      "reauth_successful": "Riautenticazione completata con successo",
+      "all_accounts_configured": "Tutti gli account di queste credenziali BC Hydro sono già configurati"
     }
   },
   "options": {

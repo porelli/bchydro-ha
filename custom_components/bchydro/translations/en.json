@@ -9,6 +9,17 @@
           "password": "Password"
         }
       },
+      "account": {
+        "title": "Choose BC Hydro account",
+        "description": "Your BC Hydro login ({username}) has access to more than one account. Choose the one to follow in Home Assistant.",
+        "data": {
+          "account_id": "Account",
+          "account_name": "Name for this account"
+        },
+        "data_description": {
+          "account_name": "Used for the device and entity names, e.g. \"Home\" or \"Cabin\". Leave as-is to use the account number."
+        }
+      },
       "reauth_confirm": {
         "title": "Reauthenticate BC Hydro",
         "description": "Your BC Hydro session has expired. Please log in again to continue.\n\nUsername: {username}",
@@ -21,11 +32,14 @@
     "error": {
       "invalid_auth": "Invalid username or password. Please check your credentials.",
       "captcha_required": "Login failed - BC Hydro showed a CAPTCHA. This usually means wrong credentials or too many attempts. Please verify your password and try again.",
-      "unknown": "Unexpected error occurred"
+      "cannot_connect": "Failed to connect to BC Hydro. The service may be temporarily unavailable - please try again.",
+      "unknown": "Unexpected error occurred",
+      "name_in_use": "That name is already used by another BC Hydro account. Please pick a different one."
     },
     "abort": {
       "already_configured": "This account is already configured",
-      "reauth_successful": "Re-authentication successful"
+      "reauth_successful": "Re-authentication successful",
+      "all_accounts_configured": "Every account of this BC Hydro login is already set up"
     }
   },
   "options": {

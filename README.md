@@ -62,6 +62,10 @@ The integration provides the following sensors:
 - **Home Assistant 2024.8.0 or newer**
 - A BC Hydro account with an active smart meter
 
+On Home Assistant 2026.3 or newer the BC Hydro logo is served from this repository
+(`custom_components/bchydro/brand/`). Older versions show Home Assistant's generic
+placeholder instead, which is cosmetic only.
+
 ## Installation
 
 ### HACS (Recommended)
@@ -92,6 +96,24 @@ That's it! The integration will:
 - Follow all SSO redirects
 - Extract and store necessary cookies
 - Re-authenticate automatically when sessions expire
+
+### Multiple accounts
+
+If your BC Hydro login has access to more than one account - a previous address,
+a second service on the property, or access shared with you - the setup asks
+which account to follow and what to call it (for example "Home" or "Cabin").
+
+You can follow **several accounts at once**: add the integration again with the
+same login and pick the next account. Accounts that are already set up are left
+out of the list. Each account gets:
+
+- its own device, named after what you called it, so the entities are easy to
+  tell apart (`sensor.bc_hydro_cabin_cost_to_date`)
+- its own Energy dashboard statistics (*BC Hydro Energy Consumption (Cabin)*)
+
+The first account you configure keeps the original entity and statistic names, so
+upgrading from an earlier version changes nothing about your existing history or
+Energy dashboard configuration.
 
 ## Data Update Frequency
 
@@ -126,7 +148,11 @@ If you receive authentication errors:
 1. **Verify your credentials** - Make sure your username and password are correct
 2. **Check the logs** - Enable debug logging (see below) to see detailed error messages
 
-The integration automatically re-authenticates when sessions expire, so you shouldn't need to manually reconfigure unless your password changes.
+The integration logs in again on every update, so a single failed login (a network
+blip, a BC Hydro maintenance window, a CAPTCHA after too many attempts) is retried
+on the next update instead of breaking the integration. Reauthentication is only
+requested after several consecutive failures, which normally means the password
+really has changed.
 
 ### Reauthentication Required
 

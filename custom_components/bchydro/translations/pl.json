@@ -9,6 +9,17 @@
           "password": "Hasło"
         }
       },
+      "account": {
+        "title": "Wybierz konto BC Hydro",
+        "description": "Twoje konto logowania BC Hydro ({username}) ma dostęp do więcej niż jednego konta. Wybierz to, które ma być używane w Home Assistant.",
+        "data": {
+          "account_id": "Konto",
+          "account_name": "Nazwa tego konta"
+        },
+        "data_description": {
+          "account_name": "Używana w nazwach urządzenia i encji, np. \"Dom\" lub \"Domek\". Pozostaw bez zmian, aby użyć numeru konta."
+        }
+      },
       "reauth_confirm": {
         "title": "Ponowna autoryzacja BC Hydro",
         "description": "Twoja sesja BC Hydro wygasła. Zaloguj się ponownie, aby kontynuować.\n\nNazwa użytkownika: {username}",
@@ -21,11 +32,14 @@
     "error": {
       "invalid_auth": "Nieprawidłowa nazwa użytkownika lub hasło. Sprawdź swoje dane logowania.",
       "captcha_required": "Logowanie nie powiodło się - BC Hydro wyświetliło CAPTCHA. Zwykle oznacza to nieprawidłowe dane logowania lub zbyt wiele prób. Sprawdź hasło i spróbuj ponownie.",
-      "unknown": "Wystąpił nieoczekiwany błąd"
+      "cannot_connect": "Nie udało się połączyć z BC Hydro. Usługa może być tymczasowo niedostępna – spróbuj ponownie.",
+      "unknown": "Wystąpił nieoczekiwany błąd",
+      "name_in_use": "Ta nazwa jest już używana przez inne konto BC Hydro. Wybierz inną."
     },
     "abort": {
       "already_configured": "To konto jest już skonfigurowane",
-      "reauth_successful": "Ponowna autoryzacja zakończona pomyślnie"
+      "reauth_successful": "Ponowna autoryzacja zakończona pomyślnie",
+      "all_accounts_configured": "Wszystkie konta tego logowania BC Hydro są już skonfigurowane"
     }
   },
   "options": {

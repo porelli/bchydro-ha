@@ -14,7 +14,9 @@ from aiohttp import ClientSession, ClientTimeout
 from bs4 import BeautifulSoup
 
 from .const import (
+    ACCOUNT_LIST_URL,
     ACCOUNT_PROFILE_URL,
+    ACCOUNT_SELECT_URL,
     CONSUMPTION_DATA_URL,
     GLOBAL_DATA_URL,
     LOGIN_GOTO_URL,
@@ -35,12 +37,47 @@ _GLOBAL_MAX_ATTEMPTS_PER_WINDOW = 6  # Max attempts per 60-second window
 _GLOBAL_WINDOW_SECONDS = 60.0
 
 
+# Phrases that positively identify a rejected login. Matching a bare "invalid"
+# against the whole page is not safe: BC Hydro's login page ships client-side
+# validation scripts, so any unexpected page (maintenance notice, redirect glitch)
+# would be misread as wrong credentials and permanently break the integration.
+CREDENTIAL_REJECTED_MARKERS = (
+    "invalid username or password",
+    "invalid email or password",
+    "incorrect username or password",
+    "incorrect email or password",
+    "username or password is incorrect",
+    "email or password is incorrect",
+    "invalid login credentials",
+    "invalid user name or password",
+    "authentication failed",
+    "wrong password",
+    "password is incorrect",
+    "account has been locked",
+    "account is locked",
+)
+
+
 class BCHydroApiError(Exception):
     """Exception raised for BC Hydro API errors."""
 
 
 class BCHydroAuthError(BCHydroApiError):
-    """Exception raised for authentication errors."""
+    """Exception raised when BC Hydro rejects the credentials.
+
+    Raise this only when the failure is attributable to the account itself.
+    Home Assistant treats it as terminal: it stops polling and waits for the user
+    to re-enter their password. Transient problems must use
+    BCHydroConnectionError instead.
+    """
+
+
+class BCHydroConnectionError(BCHydroApiError):
+    """Exception raised for transient problems reaching BC Hydro.
+
+    Network errors, timeouts, HTTP failures and local rate limiting all belong
+    here: they say nothing about the credentials and must be retried.
+    """
 
 
 class BCHydroApiClient:
@@ -51,10 +88,12 @@ class BCHydroApiClient:
         username: str,
         password: str,
         session: ClientSession | None = None,
+        account_id: str | None = None,
     ) -> None:
         """Initialize the API client."""
         self._username = username
         self._password = password
+        self._account_id = account_id
         self._provided_session = session
         self._session: ClientSession | None = None
         self._cookie_jar = aiohttp.CookieJar()
@@ -128,7 +167,7 @@ class BCHydroApiClient:
                     _GLOBAL_WINDOW_SECONDS,
                     wait_time,
                 )
-                raise BCHydroAuthError(
+                raise BCHydroConnectionError(
                     f"Too many authentication attempts. Please wait {int(wait_time)} seconds."
                 )
 
@@ -180,8 +219,10 @@ class BCHydroApiClient:
                 allow_redirects=True,
             ) as response:
                 if response.status != 200:
-                    raise BCHydroAuthError(
-                        f"Authentication failed with status {response.status}"
+                    # A bad status says nothing about the credentials (5xx during
+                    # maintenance, 403 from a WAF, ...) - keep it retryable.
+                    raise BCHydroConnectionError(
+                        f"BC Hydro login returned status {response.status}"
                     )
 
                 page_html = await response.text()
@@ -193,11 +234,8 @@ class BCHydroApiClient:
                     # Check for specific error indicators in the page
                     page_lower = page_html.lower()
                     has_captcha = "captcha" in page_lower or "recaptcha" in page_lower
-                    has_invalid_creds = (
-                        "invalid" in page_lower
-                        or "incorrect" in page_lower
-                        or "wrong password" in page_lower
-                        or "authentication failed" in page_lower
+                    has_invalid_creds = any(
+                        marker in page_lower for marker in CREDENTIAL_REJECTED_MARKERS
                     )
 
                     if has_invalid_creds:
@@ -240,14 +278,24 @@ class BCHydroApiClient:
             self._authenticated = True
             self._auth_attempt_count = 0
             _LOGGER.info("Successfully authenticated with BC Hydro")
+
+            if self._account_id:
+                # Every fresh session starts on the login's default account, so
+                # re-select the configured one before any data is fetched.
+                await self._select_preferred_account()
+
             return True
 
         except aiohttp.ClientError as err:
-            raise BCHydroAuthError(f"Network error: {err}") from err
-        except BCHydroAuthError:
+            raise BCHydroConnectionError(f"Network error: {err}") from err
+        except (TimeoutError, OSError) as err:
+            raise BCHydroConnectionError(f"Network error: timeout ({err})") from err
+        except BCHydroApiError:
             raise
         except Exception as err:
-            raise BCHydroAuthError(f"Authentication error: {err}") from err
+            # Unexpected failure (parsing, library change, ...). It is not evidence
+            # that the credentials are wrong, so keep it retryable.
+            raise BCHydroApiError(f"Authentication error: {err}") from err
 
     async def authenticate_with_cookies(self, cookies: dict[str, str]) -> bool:
         """Authenticate using existing cookies.
@@ -325,16 +373,134 @@ class BCHydroApiClient:
         """Get current cookies for storage."""
         return self._cookies.copy()
 
+    async def get_accounts(self) -> list[dict[str, Any]]:
+        """List the accounts this login has access to.
+
+        Returns:
+            One dict per account with at least ``accountId``, ``accountNumber``,
+            ``accountDesc`` and ``selected``. Empty if the portal did not answer
+            with the expected JSON.
+        """
+        session = self._provided_session if self._provided_session else self._session
+        if not session:
+            raise BCHydroApiError("Session not initialized - please authenticate first")
+
+        headers = {"X-Requested-With": "XMLHttpRequest", "Accept": "*/*"}
+
+        try:
+            async with session.get(ACCOUNT_LIST_URL, headers=headers) as response:
+                if response.status != 200:
+                    raise BCHydroConnectionError(
+                        f"Failed to list accounts: {response.status}"
+                    )
+                try:
+                    accounts = await response.json(content_type=None)
+                except Exception as err:  # noqa: BLE001 - portal may answer with HTML
+                    _LOGGER.debug("Could not parse the account list: %s", err)
+                    return []
+        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+            raise BCHydroConnectionError(f"Network error listing accounts: {err}") from err
+
+        if not isinstance(accounts, list):
+            return []
+        return [account for account in accounts if isinstance(account, dict)]
+
+    async def select_account(self, account_id: str) -> None:
+        """Make account_id the active account for this session."""
+        session = self._provided_session if self._provided_session else self._session
+        if not session:
+            raise BCHydroApiError("Session not initialized - please authenticate first")
+
+        headers = {"Accept": "text/html,application/xhtml+xml,*/*;q=0.8"}
+
+        try:
+            async with session.get(
+                ACCOUNT_SELECT_URL, params={"aid": account_id}, headers=headers
+            ) as response:
+                if response.status != 200:
+                    raise BCHydroConnectionError(
+                        f"Failed to select account: {response.status}"
+                    )
+        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+            raise BCHydroConnectionError(
+                f"Network error selecting account: {err}"
+            ) from err
+        _LOGGER.debug("Selected BC Hydro account %s", account_id)
+
+    async def _select_preferred_account(self) -> bool:
+        """Activate the configured account, or the only sensible candidate.
+
+        A login with more than one account (a previous address, a second service,
+        shared access) starts out with no account selected, and the data endpoints
+        then answer with HTML instead of JSON.
+
+        Returns:
+            True if an account was selected.
+        """
+        accounts = await self.get_accounts()
+        if not accounts:
+            return False
+
+        if len(accounts) > 1:
+            _LOGGER.debug(
+                "BC Hydro login has %d accounts: %s",
+                len(accounts),
+                ", ".join(
+                    f"{account.get('accountId')} ({account.get('accountDesc')})"
+                    for account in accounts
+                ),
+            )
+
+        chosen: dict[str, Any] | None = None
+        if self._account_id:
+            chosen = next(
+                (a for a in accounts if a.get("accountId") == self._account_id), None
+            )
+            if chosen is None:
+                raise BCHydroApiError(
+                    f"Configured account {self._account_id} is not available for "
+                    f"this login. Please reconfigure the integration."
+                )
+        if chosen is None:
+            chosen = next((a for a in accounts if a.get("selected")), accounts[0])
+            if len(accounts) > 1:
+                _LOGGER.info(
+                    "No BC Hydro account configured, following account %s. "
+                    "Re-add the integration to follow a different one.",
+                    chosen.get("accountNumber"),
+                )
+
+        account_id = chosen.get("accountId")
+        if not account_id:
+            return False
+
+        await self.select_account(str(account_id))
+        return True
+
     async def get_account_profile(self) -> dict[str, Any]:
         """Get account profile data from global-data endpoint."""
         if not self._authenticated:
             _LOGGER.debug("get_account_profile: authenticating (not yet authenticated)")
             await self.authenticate()
 
-        return await self._fetch_account_profile(allow_retry=True)
+        try:
+            return await self._fetch_account_profile(allow_retry=True)
+        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+            raise BCHydroConnectionError(
+                f"Network error fetching account profile: {err}"
+            ) from err
 
-    async def _fetch_account_profile(self, allow_retry: bool = True) -> dict[str, Any]:
-        """Fetch account profile, with optional retry on session expiration."""
+    async def _fetch_account_profile(
+        self, allow_retry: bool = True, allow_account_select: bool = True
+    ) -> dict[str, Any]:
+        """Fetch account profile, recovering from a missing account selection.
+
+        Args:
+            allow_retry: Re-authenticate once if the session looks expired.
+            allow_account_select: Try activating an account once. A login with
+                several accounts has none selected, and this endpoint then answers
+                with the portal HTML instead of JSON.
+        """
         session = self._provided_session if self._provided_session else self._session
         if not session:
             raise BCHydroApiError("Session not initialized - please authenticate first")
@@ -351,8 +517,13 @@ class BCHydroApiClient:
             content_type = response.headers.get("Content-Type", "")
 
             # Check if we got redirected to login page (HTML instead of JSON)
-            # This happens when the session has expired on BC Hydro's side
+            # This happens when the session has expired on BC Hydro's side, or
+            # when no account is selected yet (logins with several accounts)
             if "text/html" in content_type or "login" in str(response.url).lower():
+                if allow_account_select and await self._select_account_for_recovery():
+                    return await self._fetch_account_profile(
+                        allow_retry=allow_retry, allow_account_select=False
+                    )
                 if allow_retry:
                     _LOGGER.debug(
                         "Session expired (got HTML login page), re-authenticating..."
@@ -372,6 +543,10 @@ class BCHydroApiClient:
                 return self._parse_account_profile_json(json_data)
             except Exception as err:
                 # If JSON parsing fails, might be HTML login page
+                if allow_account_select and await self._select_account_for_recovery():
+                    return await self._fetch_account_profile(
+                        allow_retry=allow_retry, allow_account_select=False
+                    )
                 if allow_retry:
                     _LOGGER.debug(
                         "JSON parse failed (possible session expiration), re-authenticating: %s",
@@ -381,6 +556,14 @@ class BCHydroApiClient:
                     await self.authenticate()
                     return await self._fetch_account_profile(allow_retry=False)
                 raise BCHydroApiError(f"Failed to parse account profile: {err}") from err
+
+    async def _select_account_for_recovery(self) -> bool:
+        """Try to activate an account after the portal answered with HTML."""
+        try:
+            return await self._select_preferred_account()
+        except BCHydroConnectionError as err:
+            _LOGGER.debug("Could not select a BC Hydro account: %s", err)
+            return False
 
     async def get_consumption_data(
         self,
@@ -427,14 +610,21 @@ class BCHydroApiClient:
             headers["X-CSRF-Token"] = self._csrf_token
             headers["bchydroparam"] = self._csrf_token
 
-        async with session.post(
-            CONSUMPTION_DATA_URL,
-            data=post_data,
-            headers=headers,
-        ) as response:
-            if response.status != 200:
-                raise BCHydroApiError(f"Failed to get consumption data: {response.status}")
-            xml_text = await response.text()
+        try:
+            async with session.post(
+                CONSUMPTION_DATA_URL,
+                data=post_data,
+                headers=headers,
+            ) as response:
+                if response.status != 200:
+                    raise BCHydroApiError(
+                        f"Failed to get consumption data: {response.status}"
+                    )
+                xml_text = await response.text()
+        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+            raise BCHydroConnectionError(
+                f"Network error fetching consumption data: {err}"
+            ) from err
 
         self._deduplicate_cookies()
         return self._parse_consumption_xml(xml_text, granularity)

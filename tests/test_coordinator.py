@@ -239,13 +239,21 @@ async def test_update_data_auth_error(
     hass: HomeAssistant,
     mock_config_entry,
 ) -> None:
-    """Test data update handles authentication error."""
+    """Test data update handles authentication error.
+
+    Reauthentication is only requested once the login has failed repeatedly:
+    ConfigEntryAuthFailed stops the coordinator until the user intervenes.
+    """
     mock_client = AsyncMock()
     mock_client.get_account_profile = AsyncMock(
         side_effect=BCHydroAuthError("Invalid credentials")
     )
 
     coordinator = BCHydroDataUpdateCoordinator(hass, mock_client, mock_config_entry)
+
+    for _ in range(coordinator.MAX_CONSECUTIVE_AUTH_FAILURES - 1):
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
 
     with pytest.raises(ConfigEntryAuthFailed) as exc_info:
         await coordinator._async_update_data()

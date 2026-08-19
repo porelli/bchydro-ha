@@ -9,6 +9,17 @@
           "password": "密碼"
         }
       },
+      "account": {
+        "title": "選擇 BC Hydro 帳戶",
+        "description": "您的 BC Hydro 登入帳號（{username}）可存取多個帳戶。請選擇要在 Home Assistant 中使用的帳戶。",
+        "data": {
+          "account_id": "帳戶",
+          "account_name": "此帳戶的名稱"
+        },
+        "data_description": {
+          "account_name": "用於裝置與實體名稱，例如「家」或「小屋」。保持原樣則使用帳戶號碼。"
+        }
+      },
       "reauth_confirm": {
         "title": "重新驗證 BC Hydro",
         "description": "您的 BC Hydro 工作階段已過期。請重新登入以繼續。\n\n使用者名稱：{username}",
@@ -21,11 +32,14 @@
     "error": {
       "invalid_auth": "使用者名稱或密碼無效。請檢查您的憑據。",
       "captcha_required": "登入失敗 - BC Hydro 顯示了驗證碼。這通常表示憑據錯誤或嘗試次數過多。請驗證您的密碼並重試。",
-      "unknown": "發生意外錯誤"
+      "cannot_connect": "無法連線至 BC Hydro。服務可能暫時不可用，請稍後重試。",
+      "unknown": "發生意外錯誤",
+      "name_in_use": "該名稱已被另一個 BC Hydro 帳戶使用，請另選一個。"
     },
     "abort": {
       "already_configured": "此帳戶已設定",
-      "reauth_successful": "重新驗證成功"
+      "reauth_successful": "重新驗證成功",
+      "all_accounts_configured": "此 BC Hydro 登入帳號下的所有帳戶均已設定"
     }
   },
   "options": {

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import logging
-from typing import Any
+from typing import Any, NamedTuple
 
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.statistics import (
@@ -25,7 +25,42 @@ STATISTIC_ID_ENERGY = f"{DOMAIN}:energy_consumption"
 STATISTIC_ID_COST = f"{DOMAIN}:energy_cost"
 
 
-async def async_cleanup_future_statistics(hass: HomeAssistant) -> int:
+class AccountStatistics(NamedTuple):
+    """The statistics one BC Hydro account writes to.
+
+    Every config entry owns its own pair of statistic ids: two accounts sharing
+    them would interleave their cumulative sums and produce nonsense (including
+    negative consumption) in the Energy dashboard.
+    """
+
+    energy_id: str
+    cost_id: str
+    label: str = ""
+
+
+#: Ids used before accounts could be told apart. The first configured account
+#: keeps them so existing history and Energy dashboard settings still resolve.
+LEGACY_STATISTICS = AccountStatistics(STATISTIC_ID_ENERGY, STATISTIC_ID_COST)
+
+
+def account_statistics(suffix: str = "", label: str = "") -> AccountStatistics:
+    """Return the statistics an account writes to.
+
+    Args:
+        suffix: Empty for the first configured account (keeps the original ids),
+            otherwise an opaque per-account token.
+        label: Human readable account name, shown in the statistics list.
+    """
+    if not suffix:
+        return AccountStatistics(STATISTIC_ID_ENERGY, STATISTIC_ID_COST, label)
+    return AccountStatistics(
+        f"{STATISTIC_ID_ENERGY}_{suffix}", f"{STATISTIC_ID_COST}_{suffix}", label
+    )
+
+
+async def async_cleanup_future_statistics(
+    hass: HomeAssistant, stats: AccountStatistics = LEGACY_STATISTICS
+) -> int:
     """Check for statistics with future timestamps (corrupted data).
 
     Returns the number of corrupted records found.
@@ -40,7 +75,7 @@ async def async_cleanup_future_statistics(hass: HomeAssistant) -> int:
         hass,
         now - timedelta(days=365),  # Look back a year
         now + timedelta(days=365),  # Look forward a year to find future entries
-        {STATISTIC_ID_ENERGY, STATISTIC_ID_COST},
+        {stats.energy_id, stats.cost_id},
         "hour",
         None,
         {"sum"},
@@ -48,7 +83,7 @@ async def async_cleanup_future_statistics(hass: HomeAssistant) -> int:
 
     # Find future timestamps
     future_count = 0
-    for stat_id in [STATISTIC_ID_ENERGY, STATISTIC_ID_COST]:
+    for stat_id in [stats.energy_id, stats.cost_id]:
         if stat_id in existing_stats:
             for stat in existing_stats[stat_id]:
                 stat_time = datetime.fromtimestamp(stat["start"], tz=timezone.utc)
@@ -66,15 +101,19 @@ async def async_cleanup_future_statistics(hass: HomeAssistant) -> int:
     return future_count
 
 
-def _build_statistics_metadata() -> tuple[StatisticMetaData, StatisticMetaData]:
+def _build_statistics_metadata(
+    stats: AccountStatistics = LEGACY_STATISTICS,
+) -> tuple[StatisticMetaData, StatisticMetaData]:
     """Build metadata for energy and cost statistics."""
+    named = f" ({stats.label})" if stats.label else ""
+
     energy_meta: StatisticMetaData = {
         "has_mean": False,
         "has_sum": True,
         "mean_type": StatisticMeanType.NONE,
-        "name": "BC Hydro Energy Consumption",
+        "name": f"BC Hydro Energy Consumption{named}",
         "source": DOMAIN,
-        "statistic_id": STATISTIC_ID_ENERGY,
+        "statistic_id": stats.energy_id,
         "unit_class": "energy",
         "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
     }
@@ -83,9 +122,9 @@ def _build_statistics_metadata() -> tuple[StatisticMetaData, StatisticMetaData]:
         "has_mean": False,
         "has_sum": True,
         "mean_type": StatisticMeanType.NONE,
-        "name": "BC Hydro Energy Cost",
+        "name": f"BC Hydro Energy Cost{named}",
         "source": DOMAIN,
-        "statistic_id": STATISTIC_ID_COST,
+        "statistic_id": stats.cost_id,
         "unit_class": None,
         "unit_of_measurement": "CAD",
     }
@@ -94,7 +133,7 @@ def _build_statistics_metadata() -> tuple[StatisticMetaData, StatisticMetaData]:
 
 
 async def _get_last_statistics_state(
-    hass: HomeAssistant,
+    hass: HomeAssistant, stats: AccountStatistics = LEGACY_STATISTICS
 ) -> tuple[float, float, datetime | None]:
     """Get the last recorded statistics state.
 
@@ -102,18 +141,18 @@ async def _get_last_statistics_state(
         Tuple of (last_energy_sum, last_cost_sum, last_timestamp)
     """
     last_stats_energy = await get_instance(hass).async_add_executor_job(
-        get_last_statistics, hass, 1, STATISTIC_ID_ENERGY, True, {"sum"}
+        get_last_statistics, hass, 1, stats.energy_id, True, {"sum"}
     )
     last_stats_cost = await get_instance(hass).async_add_executor_job(
-        get_last_statistics, hass, 1, STATISTIC_ID_COST, True, {"sum"}
+        get_last_statistics, hass, 1, stats.cost_id, True, {"sum"}
     )
 
     cumulative_sum_energy = 0.0
     cumulative_sum_cost = 0.0
     last_timestamp = None
 
-    if STATISTIC_ID_ENERGY in last_stats_energy and last_stats_energy[STATISTIC_ID_ENERGY]:
-        last_stat = last_stats_energy[STATISTIC_ID_ENERGY][0]
+    if stats.energy_id in last_stats_energy and last_stats_energy[stats.energy_id]:
+        last_stat = last_stats_energy[stats.energy_id][0]
         cumulative_sum_energy = last_stat.get("sum", 0.0)
         last_timestamp = datetime.fromtimestamp(last_stat["start"], tz=timezone.utc)
         _LOGGER.debug(
@@ -122,8 +161,8 @@ async def _get_last_statistics_state(
             last_timestamp.isoformat(),
         )
 
-    if STATISTIC_ID_COST in last_stats_cost and last_stats_cost[STATISTIC_ID_COST]:
-        last_stat = last_stats_cost[STATISTIC_ID_COST][0]
+    if stats.cost_id in last_stats_cost and last_stats_cost[stats.cost_id]:
+        last_stat = last_stats_cost[stats.cost_id][0]
         cumulative_sum_cost = last_stat.get("sum", 0.0)
         _LOGGER.debug("Found existing cost statistics: sum=$%.2f", cumulative_sum_cost)
 
@@ -131,7 +170,7 @@ async def _get_last_statistics_state(
 
 
 async def _get_earliest_statistics_timestamp(
-    hass: HomeAssistant,
+    hass: HomeAssistant, stats: AccountStatistics = LEGACY_STATISTICS
 ) -> datetime | None:
     """Get the earliest recorded statistics timestamp.
 
@@ -147,18 +186,18 @@ async def _get_earliest_statistics_timestamp(
         hass,
         now - timedelta(days=365),
         now,
-        {STATISTIC_ID_ENERGY},
+        {stats.energy_id},
         "hour",
         None,
         {"sum"},
     )
 
-    if STATISTIC_ID_ENERGY not in existing_stats or not existing_stats[STATISTIC_ID_ENERGY]:
+    if stats.energy_id not in existing_stats or not existing_stats[stats.energy_id]:
         return None
 
     # Find the earliest timestamp
     earliest_timestamp = None
-    for stat in existing_stats[STATISTIC_ID_ENERGY]:
+    for stat in existing_stats[stats.energy_id]:
         stat_time = datetime.fromtimestamp(stat["start"], tz=timezone.utc)
         if earliest_timestamp is None or stat_time < earliest_timestamp:
             earliest_timestamp = stat_time
@@ -166,7 +205,9 @@ async def _get_earliest_statistics_timestamp(
     return earliest_timestamp
 
 
-async def _clear_statistics(hass: HomeAssistant) -> None:
+async def _clear_statistics(
+    hass: HomeAssistant, stats: AccountStatistics = LEGACY_STATISTICS
+) -> None:
     """Clear all BC Hydro statistics to allow fresh import.
 
     This is used when the user requests more historical data than currently exists.
@@ -182,7 +223,7 @@ async def _clear_statistics(hass: HomeAssistant) -> None:
 
     _LOGGER.info("Clearing existing BC Hydro statistics for fresh import")
     recorder.async_clear_statistics(
-        [STATISTIC_ID_ENERGY, STATISTIC_ID_COST],
+        [stats.energy_id, stats.cost_id],
         on_done=on_clear_done,
     )
 
@@ -302,6 +343,7 @@ async def async_import_statistics(
     hass: HomeAssistant,
     api_client: Any,
     historical_days: int,
+    stats: AccountStatistics = LEGACY_STATISTICS,
 ) -> None:
     """Import statistics for the Energy Dashboard.
 
@@ -315,6 +357,7 @@ async def async_import_statistics(
         hass: Home Assistant instance
         api_client: BC Hydro API client
         historical_days: Number of days of history to maintain
+        stats: The statistic ids this account writes to
     """
     try:
         # BC Hydro operates on Pacific time, so we need to use that for date calculations
@@ -329,8 +372,10 @@ async def async_import_statistics(
         )
 
         # Check existing statistics to determine what we need
-        cumulative_energy, cumulative_cost, last_timestamp = await _get_last_statistics_state(hass)
-        earliest_existing = await _get_earliest_statistics_timestamp(hass)
+        cumulative_energy, cumulative_cost, last_timestamp = await _get_last_statistics_state(
+            hass, stats
+        )
+        earliest_existing = await _get_earliest_statistics_timestamp(hass, stats)
 
         _LOGGER.debug(
             "Existing stats state: last_timestamp=%s, earliest=%s, energy_sum=%.2f, cost_sum=%.2f",
@@ -349,7 +394,7 @@ async def async_import_statistics(
                 historical_days,
                 earliest_existing.date().isoformat(),
             )
-            await _clear_statistics(hass)
+            await _clear_statistics(hass, stats)
             fetch_start = full_history_start
             last_timestamp = None
             cumulative_energy, cumulative_cost = 0.0, 0.0
@@ -449,7 +494,7 @@ async def async_import_statistics(
 
         # Import statistics
         if stats_energy or stats_cost:
-            metadata_energy, metadata_cost = _build_statistics_metadata()
+            metadata_energy, metadata_cost = _build_statistics_metadata(stats)
 
             if stats_energy:
                 _LOGGER.info(

@@ -17,11 +17,13 @@ async def test_authenticate_unexpected_error(mock_session):
     # Mock post to raise an unexpected exception
     mock_session.post.side_effect = RuntimeError("Unexpected error")
 
-    with pytest.raises(BCHydroAuthError) as exc_info:
+    with pytest.raises(BCHydroApiError) as exc_info:
         await client.authenticate()
 
-    # Should log error and wrap in BCHydroAuthError
+    # An unexpected failure is wrapped in a retryable error, not an auth error:
+    # it is no evidence that the credentials are wrong.
     assert "Authentication error" in str(exc_info.value)
+    assert not isinstance(exc_info.value, BCHydroAuthError)
 
 
 async def test_get_csrf_token_from_response_cookies():

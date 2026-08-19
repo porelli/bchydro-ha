@@ -8,6 +8,11 @@ LOGIN_PAGE_URL = f"{BASE_URL}/BCHCustomerPortal/web/login.html"
 LOGIN_URL = f"{BASE_URL}/sso/UI/Login"
 LOGIN_GOTO_URL = f"{BASE_URL}:443/BCHCustomerPortal/web/login.html"
 ACCOUNT_PROFILE_URL = f"{BASE_URL}/evportlet/web/account-profile-data.html"
+# Lists every account the login has access to, and switches the active one.
+# A login with several accounts has no account selected after signing in, so the
+# data endpoints answer with HTML instead of JSON until one is chosen.
+ACCOUNT_LIST_URL = f"{BASE_URL}/BCHCustomerPortal/web/profileContractAccounts.html"
+ACCOUNT_SELECT_URL = f"{BASE_URL}/BCHCustomerPortal/web/accountsOverview.html"
 CONSUMPTION_DATA_URL = f"{BASE_URL}/evportlet/web/consumption-data.html"
 GLOBAL_DATA_URL = f"{BASE_URL}/evportlet/web/global-data.html"
 

@@ -9,6 +9,17 @@
           "password": "Password"
         }
       },
+      "account": {
+        "title": "Piliin ang BC Hydro account",
+        "description": "Ang iyong BC Hydro login ({username}) ay may access sa higit sa isang account. Piliin kung alin ang susubaybayan sa Home Assistant.",
+        "data": {
+          "account_id": "Account",
+          "account_name": "Pangalan para sa account na ito"
+        },
+        "data_description": {
+          "account_name": "Ginagamit sa pangalan ng device at mga entity, hal. \"Bahay\" o \"Cabin\". Iwanan ito para gamitin ang numero ng account."
+        }
+      },
       "reauth_confirm": {
         "title": "Muling I-authenticate ang BC Hydro",
         "description": "Nag-expire na ang iyong sesyon sa BC Hydro. Mangyaring mag-log in muli upang magpatuloy.\n\nUsername: {username}",
@@ -21,11 +32,14 @@
     "error": {
       "invalid_auth": "Hindi wastong username o password. Pakisuri ang iyong mga kredensyal.",
       "captcha_required": "Nabigo ang pag-login - Nagpakita ng CAPTCHA ang BC Hydro. Karaniwang ibig sabihin nito ay maling kredensyal o masyadong maraming pagtatangka. Pakisuri ang iyong password at subukang muli.",
-      "unknown": "May hindi inaasahang error na naganap"
+      "cannot_connect": "Hindi makakonekta sa BC Hydro. Maaaring pansamantalang hindi available ang serbisyo - pakisubukan muli.",
+      "unknown": "May hindi inaasahang error na naganap",
+      "name_in_use": "Ginagamit na ang pangalang iyon ng ibang BC Hydro account. Pumili ng iba."
     },
     "abort": {
       "already_configured": "Naka-configure na ang account na ito",
-      "reauth_successful": "Matagumpay ang muling pag-authenticate"
+      "reauth_successful": "Matagumpay ang muling pag-authenticate",
+      "all_accounts_configured": "Naka-set up na ang lahat ng account ng BC Hydro login na ito"
     }
   },
   "options": {

@@ -9,6 +9,7 @@ from custom_components.bchydro.api import (
     BCHydroApiClient,
     BCHydroApiError,
     BCHydroAuthError,
+    BCHydroConnectionError,
 )
 
 
@@ -231,6 +232,14 @@ async def test_get_account_profile_html_response(mock_session):
     mock_html_response.text = AsyncMock(return_value="<html>Login page</html>")
     mock_html_response.__aenter__.return_value = mock_html_response
 
+    # An HTML answer can also mean "no account selected", so the client asks the
+    # portal for the account list first. No accounts here -> fall back to reauth.
+    mock_accounts_response = AsyncMock()
+    mock_accounts_response.status = 200
+    mock_accounts_response.headers = {"Content-Type": "application/json"}
+    mock_accounts_response.json = AsyncMock(return_value=[])
+    mock_accounts_response.__aenter__.return_value = mock_accounts_response
+
     # Mock successful JSON response after reauth
     mock_json_response = AsyncMock()
     mock_json_response.status = 200
@@ -238,7 +247,11 @@ async def test_get_account_profile_html_response(mock_session):
     mock_json_response.json = AsyncMock(return_value={"evpAccountId": "123", "nonWan": "false"})
     mock_json_response.__aenter__.return_value = mock_json_response
 
-    mock_session.get.side_effect = [mock_html_response, mock_json_response]
+    mock_session.get.side_effect = [
+        mock_html_response,
+        mock_accounts_response,
+        mock_json_response,
+    ]
 
     # Mock authenticate to succeed
     with patch.object(client, 'authenticate', new_callable=AsyncMock, return_value=True):
@@ -681,7 +694,11 @@ async def test_parse_account_profile_json_error():
 
 
 async def test_authenticate_non_200_status(mock_session):
-    """Test authenticate with non-200 status code."""
+    """Test authenticate with non-200 status code.
+
+    A bad HTTP status is transient (maintenance, WAF, proxy), so it must be
+    retryable rather than a credential failure.
+    """
     client = BCHydroApiClient("test@example.com", "password", session=mock_session)
 
     #Mock response with 500 status
@@ -690,10 +707,11 @@ async def test_authenticate_non_200_status(mock_session):
 
     mock_session.post.return_value.__aenter__.return_value = mock_resp
 
-    with pytest.raises(BCHydroAuthError) as exc_info:
+    with pytest.raises(BCHydroConnectionError) as exc_info:
         await client.authenticate()
 
     assert "status 500" in str(exc_info.value)
+    assert not isinstance(exc_info.value, BCHydroAuthError)
 
 
 async def test_authenticate_bchydroparam_extraction_fails(mock_session):
@@ -862,10 +880,13 @@ async def test_authenticate_too_many_total_attempts(mock_session):
 
         client = BCHydroApiClient("test@example.com", "password", session=mock_session)
 
-        with pytest.raises(BCHydroAuthError) as exc_info:
+        # Local throttling is self-inflicted and retryable - it must not be
+        # mistaken for BC Hydro rejecting the credentials.
+        with pytest.raises(BCHydroConnectionError) as exc_info:
             await client.authenticate()
 
         assert "Too many authentication attempts" in str(exc_info.value)
+        assert not isinstance(exc_info.value, BCHydroAuthError)
     finally:
         # Restore global state
         api_module._global_auth_attempts_in_window = orig_attempts

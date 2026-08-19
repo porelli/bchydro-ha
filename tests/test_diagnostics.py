@@ -201,3 +201,30 @@ async def test_diagnostics_redacts_sensitive_data(
 
     # Verify non-sensitive data is not redacted
     assert diagnostics["data"]["profile"]["ratePlanName"] == "Residential tiered rate"
+
+
+async def test_diagnostics_reports_last_update_time(
+    hass: HomeAssistant,
+    mock_config_entry,
+) -> None:
+    """Diagnostics must not crash on the update timestamp.
+
+    Reported as an AttributeError on last_update_success_time: the coordinator has
+    to be a TimestampDataUpdateCoordinator for that attribute to exist.
+    """
+    from custom_components.bchydro.coordinator import BCHydroDataUpdateCoordinator
+
+    coordinator = BCHydroDataUpdateCoordinator(hass, AsyncMock(), mock_config_entry)
+    coordinator.data = {"profile": {}, "consumption": {}}
+    mock_config_entry.runtime_data = coordinator
+
+    # Never refreshed yet
+    result = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+    assert result["coordinator"]["last_update_success_time"] is None
+
+    # After a successful refresh Home Assistant stamps the time for us
+    coordinator.last_update_success = True
+    coordinator._async_refresh_finished()
+
+    result = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+    assert result["coordinator"]["last_update_success_time"] is not None

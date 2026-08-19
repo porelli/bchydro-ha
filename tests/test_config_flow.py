@@ -429,3 +429,45 @@ async def test_options_flow_invalid_interval(hass: HomeAssistant, mock_config_en
 
         # Verify the exception contains the validation error
         assert "update_interval" in str(exc_info.value)
+
+
+async def test_options_flow_preselects_historical_days(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """The configured history length must come back pre-selected.
+
+    Home Assistant renders a select of plain numbers with no option selected, so
+    the form looked like no history was configured at all.
+    """
+    import voluptuous_serialize
+    from homeassistant.helpers import config_validation as cv
+
+    await hass.config_entries.async_add(mock_config_entry)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={"update_interval": 120, "historical_days": 30}
+    )
+
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+
+    fields = {
+        field["name"]: field
+        for field in voluptuous_serialize.convert(
+            result["data_schema"], custom_serializer=cv.custom_serializer
+        )
+    }
+    days = fields["historical_days"]
+    option_values = [value for value, _label in days["options"]]
+
+    # The frontend compares the selected value against stringified option values,
+    # so numeric choices never light up a radio button.
+    assert all(isinstance(value, str) for value in option_values), option_values
+    assert days["default"] in option_values
+    assert days["default"] == "30"
+
+    # Submitting keeps the stored value numeric for the statistics import
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"update_interval": 120, "historical_days": "60"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["historical_days"] == 60

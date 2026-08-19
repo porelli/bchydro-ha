@@ -307,9 +307,14 @@ class BCHydroSensor(CoordinatorEntity[BCHydroDataUpdateCoordinator], SensorEntit
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        # Accounts configured side by side need distinguishable device names: the
+        # entity ids are derived from them. Entries without a name (a single
+        # account, or one set up before names existed) keep plain "BC Hydro" so
+        # their entity ids never change.
+        account_name = entry.data.get("account_name")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "BC Hydro",
+            "name": f"BC Hydro {account_name}" if account_name else "BC Hydro",
             "manufacturer": "BC Hydro",
             "model": "Energy Monitor",
         }

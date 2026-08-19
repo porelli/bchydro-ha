@@ -360,8 +360,12 @@ async def test_import_statistics_backfill_clears_existing(
     hass: HomeAssistant,
     mock_recorder,
     mock_add_statistics,
+    freezer,
 ) -> None:
     """Test that statistics are cleared when user requests more history than exists."""
+    # The fixtures below describe existing statistics from Dec 2025, so pin "now"
+    # to that period - otherwise the requested window never predates them.
+    freezer.move_to("2025-12-27T12:00:00-08:00")
     # Existing statistics start at Dec 25, but user wants 30 days (back to ~Dec 9)
     earliest_existing = datetime(2025, 12, 25, 0, 0, 0, tzinfo=timezone.utc)
     last_timestamp = datetime(2025, 12, 26, 0, 0, 0, tzinfo=timezone.utc)
@@ -466,10 +470,14 @@ async def test_import_statistics_clear_timeout(
     hass: HomeAssistant,
     mock_recorder,
     mock_add_statistics,
+    freezer,
 ) -> None:
     """Test handling of timeout when clearing statistics."""
     import asyncio
 
+    # See test_import_statistics_backfill_clears_existing: pin "now" to the period
+    # the fixtures describe.
+    freezer.move_to("2025-12-27T12:00:00-08:00")
     # Existing statistics start at Dec 25, user wants 30 days (back to ~Dec 9)
     earliest_existing = datetime(2025, 12, 25, 0, 0, 0, tzinfo=timezone.utc)
     last_timestamp = datetime(2025, 12, 26, 0, 0, 0, tzinfo=timezone.utc)
@@ -577,3 +585,27 @@ async def test_import_statistics_with_none_date(
 
     # Should add statistics only from valid entry
     assert mock_add_statistics.call_count == 2
+
+
+def test_account_statistics_keeps_legacy_ids_for_the_first_account() -> None:
+    """Existing installations must keep the ids their history is stored under."""
+    from custom_components.bchydro.statistics import account_statistics
+
+    stats = account_statistics()
+    assert (stats.energy_id, stats.cost_id) == (STATISTIC_ID_ENERGY, STATISTIC_ID_COST)
+
+
+def test_account_statistics_separates_further_accounts() -> None:
+    """Every other account writes to its own pair of statistics."""
+    from custom_components.bchydro.statistics import account_statistics
+
+    cabin = account_statistics("cabin", label="42 - 456 SAMPLE AVE")
+    assert cabin.energy_id == f"{STATISTIC_ID_ENERGY}_cabin"
+    assert cabin.cost_id == f"{STATISTIC_ID_COST}_cabin"
+    assert cabin.energy_id != STATISTIC_ID_ENERGY
+
+    energy_meta, cost_meta = _build_statistics_metadata(cabin)
+    assert energy_meta["statistic_id"] == cabin.energy_id
+    # The label makes the account recognisable in the statistics list
+    assert "42 - 456 SAMPLE AVE" in energy_meta["name"]
+    assert cost_meta["statistic_id"] == cabin.cost_id

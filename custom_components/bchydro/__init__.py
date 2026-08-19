@@ -22,6 +22,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> b
     """Set up BC Hydro from a config entry."""
     username: str = entry.data[CONF_USERNAME]
     password: str = entry.data[CONF_PASSWORD]
+    # Set when the login holds several accounts (see the config flow)
+    account_id: str | None = entry.data.get("account_id")
 
     # Note: BC Hydro requires its own session with dedicated cookie jar
     # due to complex SSO authentication with multiple redirects.
@@ -29,6 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> b
     client = BCHydroApiClient(
         username=username,
         password=password,
+        account_id=account_id,
     )
 
     try:
@@ -38,15 +41,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> b
         new_cookies = client.get_cookies()
         hass.config_entries.async_update_entry(
             entry,
-            data={
-                CONF_USERNAME: username,
-                CONF_PASSWORD: password,
-                "cookies": new_cookies,
-            },
+            # Keep everything else (notably the selected account) intact
+            data={**entry.data, "cookies": new_cookies},
         )
 
         coordinator = BCHydroDataUpdateCoordinator(hass, client, entry)
         await coordinator.async_config_entry_first_refresh()
+
+        if not account_id:
+            # Entries created before accounts could be told apart don't record
+            # which one they follow. Remember it now, so that adding another
+            # account of the same login can leave this one out of the choices.
+            followed = (coordinator.data or {}).get("profile", {}).get("evpAccountId")
+            if followed:
+                hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, "account_id": followed}
+                )
 
     except BCHydroAuthError as err:
         _LOGGER.error("Authentication failed for %s: %s", username, err)

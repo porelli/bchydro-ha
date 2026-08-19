@@ -8,11 +8,15 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import (
+    TimestampDataUpdateCoordinator,
+    UpdateFailed,
+)
 
 from .api import BCHydroApiClient, BCHydroApiError, BCHydroAuthError
 from .const import DOMAIN, UPDATE_INTERVAL_MINUTES
 from .statistics import (
+    account_statistics,
     async_import_statistics,
     async_cleanup_future_statistics,
 )
@@ -20,10 +24,20 @@ from .statistics import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class BCHydroDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching BC Hydro data."""
+class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
+    """Class to manage fetching BC Hydro data.
+
+    Timestamped so that diagnostics can report when data last arrived.
+    """
 
     config_entry: ConfigEntry
+
+    # Home Assistant stops scheduling refreshes as soon as ConfigEntryAuthFailed is
+    # raised, and only a manual reauthentication brings the integration back. BC
+    # Hydro's login flow fails for plenty of reasons that look like an auth problem
+    # (maintenance pages, SSO hiccups, CAPTCHA after too many logins), so require
+    # several consecutive failures before demanding the user's attention.
+    MAX_CONSECUTIVE_AUTH_FAILURES = 3
 
     def __init__(
         self,
@@ -45,6 +59,13 @@ class BCHydroDataUpdateCoordinator(DataUpdateCoordinator):
         )
         self.client = client
         self._historical_fetched = False  # Track if we've fetched historical data
+        self.consecutive_auth_failures = 0
+        # Each configured account keeps its statistics separate; the first one
+        # configured keeps the original ids (see statistics.account_statistics).
+        self.statistics = account_statistics(
+            entry.data.get("statistic_suffix", ""),
+            entry.data.get("account_label", ""),
+        )
 
     def _calculate_daily_from_hourly(self, hourly_data: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Calculate daily consumption from hourly data.
@@ -153,7 +174,9 @@ class BCHydroDataUpdateCoordinator(DataUpdateCoordinator):
             if not self._historical_fetched:
                 self._historical_fetched = True
                 try:
-                    cleaned = await async_cleanup_future_statistics(self.hass)
+                    cleaned = await async_cleanup_future_statistics(
+                        self.hass, self.statistics
+                    )
                     if cleaned > 0:
                         _LOGGER.info("Cleaned up %d corrupted future statistics", cleaned)
                 except Exception as cleanup_err:
@@ -172,10 +195,13 @@ class BCHydroDataUpdateCoordinator(DataUpdateCoordinator):
                     self.hass,
                     self.client,
                     historical_days,
+                    self.statistics,
                 )
                 _LOGGER.debug("Statistics import completed successfully")
             except Exception as stats_err:
                 _LOGGER.warning("Failed to import statistics: %s", stats_err)
+
+            self.consecutive_auth_failures = 0
 
             # Combine the data
             return {
@@ -184,7 +210,23 @@ class BCHydroDataUpdateCoordinator(DataUpdateCoordinator):
             }
 
         except BCHydroAuthError as err:
-            _LOGGER.warning("Authentication error - triggering reauthentication: %s", err)
+            self.consecutive_auth_failures += 1
+
+            if self.consecutive_auth_failures < self.MAX_CONSECUTIVE_AUTH_FAILURES:
+                _LOGGER.warning(
+                    "BC Hydro login failed (%d/%d consecutive attempts), will retry: %s",
+                    self.consecutive_auth_failures,
+                    self.MAX_CONSECUTIVE_AUTH_FAILURES,
+                    err,
+                )
+                raise UpdateFailed(f"BC Hydro login failed: {err}") from err
+
+            _LOGGER.warning(
+                "BC Hydro login failed %d times in a row - "
+                "triggering reauthentication: %s",
+                self.consecutive_auth_failures,
+                err,
+            )
             raise ConfigEntryAuthFailed(
                 "Authentication to BC Hydro failed. Please reauthenticate."
             ) from err

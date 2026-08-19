@@ -9,6 +9,17 @@
           "password": "Mật khẩu"
         }
       },
+      "account": {
+        "title": "Chọn tài khoản BC Hydro",
+        "description": "Thông tin đăng nhập BC Hydro ({username}) của bạn có quyền truy cập nhiều tài khoản. Hãy chọn tài khoản để theo dõi trong Home Assistant.",
+        "data": {
+          "account_id": "Tài khoản",
+          "account_name": "Tên cho tài khoản này"
+        },
+        "data_description": {
+          "account_name": "Dùng cho tên thiết bị và thực thể, ví dụ \"Nhà\" hoặc \"Nhà nghỉ\". Để nguyên để dùng số tài khoản."
+        }
+      },
       "reauth_confirm": {
         "title": "Xác thực lại BC Hydro",
         "description": "Phiên BC Hydro của bạn đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.\n\nTên đăng nhập: {username}",
@@ -21,11 +32,14 @@
     "error": {
       "invalid_auth": "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng kiểm tra thông tin đăng nhập của bạn.",
       "captcha_required": "Đăng nhập thất bại - BC Hydro hiển thị CAPTCHA. Điều này thường có nghĩa là thông tin đăng nhập sai hoặc quá nhiều lần thử. Vui lòng kiểm tra mật khẩu và thử lại.",
-      "unknown": "Đã xảy ra lỗi không mong muốn"
+      "cannot_connect": "Không thể kết nối tới BC Hydro. Dịch vụ có thể tạm thời không khả dụng - vui lòng thử lại.",
+      "unknown": "Đã xảy ra lỗi không mong muốn",
+      "name_in_use": "Tên đó đã được một tài khoản BC Hydro khác sử dụng. Vui lòng chọn tên khác."
     },
     "abort": {
       "already_configured": "Tài khoản này đã được cấu hình",
-      "reauth_successful": "Xác thực lại thành công"
+      "reauth_successful": "Xác thực lại thành công",
+      "all_accounts_configured": "Tất cả tài khoản của thông tin đăng nhập BC Hydro này đã được thiết lập"
     }
   },
   "options": {
