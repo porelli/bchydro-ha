@@ -31,6 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Reworded the "temporarily blocked" message in all 16 languages so it no longer
   blames the user's password for a temporary bot block.
-- Bumped the `beautifulsoup4` requirement from 4.12.3 to 4.15.0 to match the
-  version current Home Assistant ships and avoid forcing a downgrade on other
-  integrations.
+- Relaxed the `beautifulsoup4` requirement from `==4.12.3` to `>=4.12.0` so it
+  follows the version Home Assistant bundles. A strict pin is rejected by
+  hassfest and can conflict with other integrations.
