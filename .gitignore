@@ -58,6 +58,7 @@ get_fresh_cookies.md
 test_*.py
 !tests/test_*.py
 !custom_components/**/test_*.py
+/dev
 
 # Dev config
 mypy.ini
