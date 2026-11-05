@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from .api import BCHydroApiClient, BCHydroApiError, BCHydroAuthError
-from .const import DOMAIN
+from .const import DOMAIN, KEEPALIVE_INTERVAL_MINUTES
 from .coordinator import BCHydroDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -73,6 +75,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> b
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
+    async def _keep_alive(_now: datetime) -> None:
+        await client.keep_alive()
+
+    entry.async_on_unload(
+        async_track_time_interval(
+            hass,
+            _keep_alive,
+            timedelta(minutes=KEEPALIVE_INTERVAL_MINUTES),
+        )
+    )
 
     _LOGGER.info("Successfully set up BC Hydro integration for %s", username)
     return True

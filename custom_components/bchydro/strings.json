@@ -31,7 +31,7 @@
     },
     "error": {
       "invalid_auth": "Invalid username or password. Please check your credentials.",
-      "captcha_required": "Login failed - BC Hydro showed a CAPTCHA. This usually means wrong credentials or too many attempts. Please verify your password and try again.",
+      "captcha_required": "BC Hydro is temporarily refusing automated logins (bot protection). Your password is probably fine - please wait a few hours and try again.",
       "cannot_connect": "Failed to connect to BC Hydro. The service may be temporarily unavailable - please try again.",
       "unknown": "Unexpected error occurred",
       "name_in_use": "That name is already used by another BC Hydro account. Please pick a different one."

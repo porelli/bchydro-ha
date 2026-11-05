@@ -169,6 +169,7 @@ async def test_unknown_configured_account_is_reported(mock_session) -> None:
 # --- config flow -------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("skip_setup")
 async def test_config_flow_asks_which_account_to_use(hass: HomeAssistant) -> None:
     """With several accounts the user picks one; it is stored on the entry."""
     result = await hass.config_entries.flow.async_init(
@@ -203,6 +204,7 @@ async def test_config_flow_asks_which_account_to_use(hass: HomeAssistant) -> Non
     assert "12345678" in result["title"]
 
 
+@pytest.mark.usefixtures("skip_setup")
 async def test_config_flow_skips_the_question_for_a_single_account(
     hass: HomeAssistant,
 ) -> None:

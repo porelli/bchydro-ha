@@ -8,6 +8,7 @@ from custom_components.bchydro.api import (
     BCHydroApiClient,
     BCHydroApiError,
     BCHydroAuthError,
+    BCHydroLoginBlockedError,
 )
 
 
@@ -201,7 +202,7 @@ async def test_get_consumption_data_with_timezone_dates(mock_session):
 
 
 async def test_authenticate_login_failure_html_dump():
-    """Test authenticate saves HTML dump on login failure (lines 259-260, 269)."""
+    """A bounced login reports the page's visible message for diagnosis."""
     mock_session = MagicMock()
     client = BCHydroApiClient("test@example.com", "password", session=mock_session)
 
@@ -214,10 +215,8 @@ async def test_authenticate_login_failure_html_dump():
     mock_session.cookie_jar = MagicMock()
     mock_session.cookie_jar.__iter__ = lambda self: iter([])
 
-    # Mock file operations
-    with patch("builtins.open", MagicMock()):
-        with pytest.raises(BCHydroAuthError):
-            await client.authenticate()
+    with pytest.raises(BCHydroLoginBlockedError, match="Invalid credentials"):
+        await client.authenticate()
 
 
 async def test_authenticate_with_cookies_creates_session():

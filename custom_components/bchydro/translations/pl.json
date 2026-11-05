@@ -31,7 +31,7 @@
     },
     "error": {
       "invalid_auth": "Nieprawidłowa nazwa użytkownika lub hasło. Sprawdź swoje dane logowania.",
-      "captcha_required": "Logowanie nie powiodło się - BC Hydro wyświetliło CAPTCHA. Zwykle oznacza to nieprawidłowe dane logowania lub zbyt wiele prób. Sprawdź hasło i spróbuj ponownie.",
+      "captcha_required": "BC Hydro tymczasowo odrzuca automatyczne logowania (ochrona przed botami). Hasło jest prawdopodobnie poprawne - odczekaj kilka godzin i spróbuj ponownie.",
       "cannot_connect": "Nie udało się połączyć z BC Hydro. Usługa może być tymczasowo niedostępna – spróbuj ponownie.",
       "unknown": "Wystąpił nieoczekiwany błąd",
       "name_in_use": "Ta nazwa jest już używana przez inne konto BC Hydro. Wybierz inną."

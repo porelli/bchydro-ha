@@ -23,6 +23,11 @@ CONF_PASSWORD = "password"
 # Update interval
 UPDATE_INTERVAL_MINUTES = 60
 
+# BC Hydro ends a login after under an hour without requests, but keeps an active
+# one going. A cheap request this often keeps the hourly refresh from needing a
+# fresh password login (each of which counts against BC Hydro's bot scoring).
+KEEPALIVE_INTERVAL_MINUTES = 20
+
 # Limit concurrent updates to avoid overwhelming the API
 PARALLEL_UPDATES = 1
 

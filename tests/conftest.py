@@ -212,3 +212,13 @@ def mock_setup_entry() -> Generator[AsyncMock, None, None]:
         "custom_components.bchydro.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
+
+
+@pytest.fixture
+def skip_setup():
+    """Keep entries created or added by a flow test from really being set up.
+
+    A real setup would log in to BC Hydro, which the test harness blocks.
+    """
+    with patch("custom_components.bchydro.async_setup_entry", return_value=True):
+        yield

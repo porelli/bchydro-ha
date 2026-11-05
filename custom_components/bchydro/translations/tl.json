@@ -31,7 +31,7 @@
     },
     "error": {
       "invalid_auth": "Hindi wastong username o password. Pakisuri ang iyong mga kredensyal.",
-      "captcha_required": "Nabigo ang pag-login - Nagpakita ng CAPTCHA ang BC Hydro. Karaniwang ibig sabihin nito ay maling kredensyal o masyadong maraming pagtatangka. Pakisuri ang iyong password at subukang muli.",
+      "captcha_required": "Pansamantalang tinatanggihan ng BC Hydro ang mga awtomatikong pag-login (proteksyon laban sa bot). Malamang tama ang iyong password - maghintay ng ilang oras at subukang muli.",
       "cannot_connect": "Hindi makakonekta sa BC Hydro. Maaaring pansamantalang hindi available ang serbisyo - pakisubukan muli.",
       "unknown": "May hindi inaasahang error na naganap",
       "name_in_use": "Ginagamit na ang pangalang iyon ng ibang BC Hydro account. Pumili ng iba."

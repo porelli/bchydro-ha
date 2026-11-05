@@ -58,6 +58,30 @@ CREDENTIAL_REJECTED_MARKERS = (
 )
 
 
+def _login_page_message(page_html: str) -> str:
+    """Return the visible error text of a returned login page, if any.
+
+    Only elements marked as errors count: the page always carries site-wide
+    "alert"/"warning" banners (a scam notice, outages) that say nothing about
+    this login.
+    """
+    try:
+        soup = BeautifulSoup(page_html, "html.parser")
+    except Exception:  # noqa: BLE001 - best effort, only used for diagnostics
+        return ""
+    messages: list[str] = []
+    for element in soup.find_all(["div", "p", "span", "label", "li"]):
+        attributes = " ".join(
+            [str(element.get("id", ""))] + [str(c) for c in element.get("class") or []]
+        ).lower()
+        if "error" not in attributes:
+            continue
+        text = " ".join(element.get_text(" ", strip=True).split())
+        if text and text not in messages:
+            messages.append(text)
+    return " | ".join(messages)[:300]
+
+
 class BCHydroApiError(Exception):
     """Exception raised for BC Hydro API errors."""
 
@@ -77,6 +101,17 @@ class BCHydroConnectionError(BCHydroApiError):
 
     Network errors, timeouts, HTTP failures and local rate limiting all belong
     here: they say nothing about the credentials and must be retried.
+    """
+
+
+class BCHydroLoginBlockedError(BCHydroConnectionError):
+    """Exception raised when BC Hydro turned a login away without rejecting it.
+
+    The login page is protected by an invisible, score-based reCAPTCHA. A script
+    cannot produce a token, and BC Hydro normally lets the login through anyway,
+    but when its risk scoring trips it answers with the login page again for a
+    few hours. That is not evidence of a wrong password (BC Hydro answers those
+    with HTTP 401), so it must not trigger reauthentication.
     """
 
 
@@ -218,9 +253,15 @@ class BCHydroApiClient:
                 headers=login_headers,
                 allow_redirects=True,
             ) as response:
+                if response.status == 401:
+                    # BC Hydro's SSO answers a rejected email/password pair with
+                    # an empty 401.
+                    raise BCHydroAuthError(
+                        "Invalid username or password. Please check your credentials."
+                    )
                 if response.status != 200:
-                    # A bad status says nothing about the credentials (5xx during
-                    # maintenance, 403 from a WAF, ...) - keep it retryable.
+                    # Any other bad status says nothing about the credentials (5xx
+                    # during maintenance, 403 from a WAF, ...) - keep it retryable.
                     raise BCHydroConnectionError(
                         f"BC Hydro login returned status {response.status}"
                     )
@@ -231,29 +272,30 @@ class BCHydroApiClient:
                 if "UI/Login" in response_url_str or (
                     "login.html" in response_url_str and "bchydroparam" not in page_html
                 ):
-                    # Check for specific error indicators in the page
+                    # Back on the login page. The page always embeds reCAPTCHA
+                    # (so the word "captcha" proves nothing); only an explicit
+                    # rejection message blames the credentials.
                     page_lower = page_html.lower()
-                    has_captcha = "captcha" in page_lower or "recaptcha" in page_lower
-                    has_invalid_creds = any(
+                    page_message = _login_page_message(page_html)
+                    if any(
                         marker in page_lower for marker in CREDENTIAL_REJECTED_MARKERS
-                    )
-
-                    if has_invalid_creds:
-                        # Clear indication of wrong credentials
+                    ):
                         raise BCHydroAuthError(
                             "Invalid username or password. Please check your credentials."
                         )
-                    elif has_captcha:
-                        # CAPTCHA shown but no clear credential error - could be either
-                        raise BCHydroAuthError(
-                            "BC Hydro login page showed CAPTCHA. This may indicate wrong "
-                            "credentials or too many login attempts. Please verify your "
-                            "password and try again, or login manually at https://app.bchydro.com"
-                        )
-                    else:
-                        raise BCHydroAuthError(
-                            "Authentication failed. Please check your credentials."
-                        )
+                    _LOGGER.warning(
+                        "BC Hydro sent the login page back instead of signing in "
+                        "(status %s, url %s, message: %s)",
+                        response.status,
+                        response_url_str,
+                        page_message or "none",
+                    )
+                    raise BCHydroLoginBlockedError(
+                        "BC Hydro is temporarily refusing automated logins "
+                        "(bot protection). This usually clears on its own within "
+                        "a few hours."
+                        + (f" BC Hydro said: {page_message}" if page_message else "")
+                    )
 
                 try:
                     soup = BeautifulSoup(page_html, "html.parser")
@@ -557,6 +599,43 @@ class BCHydroApiClient:
                     return await self._fetch_account_profile(allow_retry=False)
                 raise BCHydroApiError(f"Failed to parse account profile: {err}") from err
 
+    async def keep_alive(self) -> bool:
+        """Touch the session so BC Hydro does not expire it for inactivity.
+
+        Never logs in: if the session is already gone it is only marked as
+        such, and the next regular refresh signs in again.
+
+        Returns:
+            True if the session is still valid.
+        """
+        session = self._provided_session if self._provided_session else self._session
+        if not self._authenticated or session is None:
+            return False
+
+        try:
+            async with session.get(
+                GLOBAL_DATA_URL,
+                headers={"X-Requested-With": "XMLHttpRequest", "Accept": "*/*"},
+            ) as response:
+                content_type = response.headers.get("Content-Type", "")
+                alive = (
+                    response.status == 200
+                    and "text/html" not in content_type
+                    and "login" not in str(response.url).lower()
+                )
+                await response.read()
+        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+            # A network blip says nothing about the session; try again next time
+            _LOGGER.debug("BC Hydro keepalive failed: %s", err)
+            return True
+
+        if not alive:
+            _LOGGER.debug("BC Hydro session expired before the keepalive")
+            self._authenticated = False
+        else:
+            _LOGGER.debug("BC Hydro keepalive ok (session still valid)")
+        return alive
+
     async def _select_account_for_recovery(self) -> bool:
         """Try to activate an account after the portal answered with HTML."""
         try:
@@ -572,15 +651,67 @@ class BCHydroApiClient:
         date_range: str = "currentBill",
         granularity: str = "daily",
     ) -> dict[str, Any]:
-        """Get consumption data."""
-        # BC Hydro consumption endpoint requires a fresh session for each request
-        _LOGGER.debug("get_consumption_data: re-authenticating (BC Hydro requires fresh session)")
-        await self.close()
-        await self.authenticate()
+        """Get consumption data.
 
+        Reuses the signed-in session; a password login happens only when there
+        is no session yet or BC Hydro says it has expired. Every login counts
+        against BC Hydro's bot scoring, so logging in per request (as earlier
+        versions did) eventually gets the account's logins turned away.
+        """
+        if not self._authenticated:
+            _LOGGER.debug("get_consumption_data: authenticating (not yet authenticated)")
+            await self.authenticate()
+
+        xml_text = await self._post_consumption(
+            start_date, end_date, date_range, granularity
+        )
+        if xml_text is None:
+            _LOGGER.debug("Consumption request rejected, session expired - logging in again")
+            await self.close()
+            await self.authenticate()
+            xml_text = await self._post_consumption(
+                start_date, end_date, date_range, granularity
+            )
+            if xml_text is None:
+                raise BCHydroApiError(
+                    "BC Hydro rejected the consumption request right after logging in"
+                )
+
+        self._deduplicate_cookies()
+        return self._parse_consumption_xml(xml_text, granularity)
+
+    def _reset_usage_session(self) -> None:
+        """Forget the usage service's own session, keeping the login.
+
+        The usage service (/evportlet) opens a session on the first consumption
+        request and answers every later one on that session with 401. Without
+        its cookies it opens a new one from the still-valid login cookies, which
+        is what a browser gets by reloading the usage page.
+        """
+        session = self._provided_session if self._provided_session else self._session
+        if session is None:
+            return
+        jar = session.cookie_jar
+        if isinstance(jar, aiohttp.CookieJar):
+            jar.clear(lambda morsel: (morsel["path"] or "").startswith("/evportlet"))
+
+    async def _post_consumption(
+        self,
+        start_date: datetime | None,
+        end_date: datetime | None,
+        date_range: str,
+        granularity: str,
+    ) -> str | None:
+        """Request consumption data on the current session.
+
+        Returns:
+            The XML document, or None if BC Hydro no longer accepts the session.
+        """
         session = self._provided_session if self._provided_session else self._session
         if not session:
             raise BCHydroApiError("Session not initialized - please authenticate first")
+
+        self._reset_usage_session()
 
         post_data = {
             "DateRange": date_range,
@@ -616,18 +747,32 @@ class BCHydroApiClient:
                 data=post_data,
                 headers=headers,
             ) as response:
+                if response.status in (401, 403):
+                    return None
                 if response.status != 200:
                     raise BCHydroApiError(
                         f"Failed to get consumption data: {response.status}"
                     )
                 xml_text = await response.text()
+                content_type = response.headers.get("Content-Type", "")
+                response_url = str(response.url).lower()
         except (aiohttp.ClientError, TimeoutError, OSError) as err:
             raise BCHydroConnectionError(
                 f"Network error fetching consumption data: {err}"
             ) from err
 
-        self._deduplicate_cookies()
-        return self._parse_consumption_xml(xml_text, granularity)
+        if "login" in response_url:
+            # An expired login is redirected to the login page
+            return None
+        if "text/html" in content_type or "<html" in xml_text[:500].lower():
+            # Anything else in HTML is BC Hydro's error page (it redirects to
+            # siteinfo/service_unavailable.html, for instance); a new login
+            # would not help.
+            raise BCHydroConnectionError(
+                f"BC Hydro answered the consumption request with a web page "
+                f"({response_url})"
+            )
+        return xml_text
 
     def _parse_consumption_xml(self, xml_text: str, granularity: str = "daily") -> dict[str, Any]:
         """Parse consumption XML response."""

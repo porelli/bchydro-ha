@@ -13,7 +13,12 @@ from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import slugify
 
-from .api import BCHydroApiClient, BCHydroApiError, BCHydroAuthError
+from .api import (
+    BCHydroApiClient,
+    BCHydroApiError,
+    BCHydroAuthError,
+    BCHydroLoginBlockedError,
+)
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -118,14 +123,13 @@ class BCHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                 )
             except BCHydroAuthError as err:
-                # Check if error message mentions CAPTCHA
-                if "CAPTCHA" in str(err) or "captcha" in str(err).lower():
-                    errors["base"] = "captcha_required"
-                else:
-                    errors["base"] = "invalid_auth"
+                errors["base"] = "invalid_auth"
                 _LOGGER.error("Authentication failed: %s", err)
             except AbortFlow:
                 raise
+            except BCHydroLoginBlockedError as err:
+                _LOGGER.error("BC Hydro turned the login away: %s", err)
+                errors["base"] = "captcha_required"
             except BCHydroApiError as err:
                 # Transient problem (network, timeout, BC Hydro unavailable) - the
                 # credentials may well be fine, so don't blame them.
@@ -314,12 +318,11 @@ class BCHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                     return self.async_abort(reason="reauth_successful")
 
-            except BCHydroAuthError as err:
-                # Check if error message mentions CAPTCHA
-                if "CAPTCHA" in str(err) or "captcha" in str(err).lower():
-                    errors["base"] = "captcha_required"
-                else:
-                    errors["base"] = "invalid_auth"
+            except BCHydroAuthError:
+                errors["base"] = "invalid_auth"
+            except BCHydroLoginBlockedError as err:
+                _LOGGER.error("BC Hydro turned the login away during reauth: %s", err)
+                errors["base"] = "captcha_required"
             except BCHydroApiError as err:
                 # See async_step_user: a transient failure is not a bad password.
                 _LOGGER.error("Could not reach BC Hydro during reauth: %s", err)

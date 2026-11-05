@@ -9,6 +9,7 @@ from custom_components.bchydro.api import (
     BCHydroApiClient,
     BCHydroApiError,
     BCHydroAuthError,
+    BCHydroLoginBlockedError,
     BCHydroConnectionError,
 )
 
@@ -58,20 +59,20 @@ async def test_authenticate_failure_wrong_credentials(mock_session):
     """Test authentication failure with wrong credentials."""
     client = BCHydroApiClient("test@example.com", "wrong_password", session=mock_session)
 
-    # Mock failed login (still on login page)
+    # BC Hydro's SSO answers a rejected email/password with an empty 401
     mock_response = AsyncMock()
-    mock_response.status = 200
+    mock_response.status = 401
     mock_response.url = "https://app.bchydro.com/sso/UI/Login"
-    mock_response.text = AsyncMock(return_value="<html>Login Page</html>")
+    mock_response.text = AsyncMock(return_value="")
     mock_response.__aenter__.return_value = mock_response
     mock_session.post.return_value = mock_response
 
-    with pytest.raises(BCHydroAuthError, match="Authentication failed"):
+    with pytest.raises(BCHydroAuthError, match="Invalid username or password"):
         await client.authenticate()
 
 
 async def test_authenticate_captcha_required(mock_session):
-    """Test authentication when CAPTCHA is required."""
+    """A login bounced back to the reCAPTCHA page is transient, not a bad password."""
     client = BCHydroApiClient("test@example.com", "password", session=mock_session)
 
     # Mock response with CAPTCHA
@@ -84,8 +85,10 @@ async def test_authenticate_captcha_required(mock_session):
     mock_response.__aenter__.return_value = mock_response
     mock_session.post.return_value = mock_response
 
-    with pytest.raises(BCHydroAuthError, match="CAPTCHA"):
+    with pytest.raises(BCHydroLoginBlockedError, match="bot protection") as excinfo:
         await client.authenticate()
+    assert not isinstance(excinfo.value, BCHydroAuthError)
+    assert isinstance(excinfo.value, BCHydroConnectionError)
 
 
 async def test_authenticate_creates_own_session():

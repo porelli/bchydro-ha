@@ -7,7 +7,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.bchydro.api import BCHydroAuthError
+from custom_components.bchydro.api import BCHydroAuthError, BCHydroLoginBlockedError
 from custom_components.bchydro.const import DOMAIN
 
 
@@ -110,7 +110,7 @@ async def test_form_user_captcha_required(hass: HomeAssistant) -> None:
     ) as mock_api_class:
         mock_client = AsyncMock()
         mock_client.authenticate = AsyncMock(
-            side_effect=BCHydroAuthError("BC Hydro requires CAPTCHA for login")
+            side_effect=BCHydroLoginBlockedError("BC Hydro is refusing automated logins")
         )
         mock_client.close = AsyncMock()
         mock_api_class.return_value = mock_client
@@ -330,7 +330,7 @@ async def test_reauth_flow_captcha_required(hass: HomeAssistant, mock_config_ent
         ) as mock_api_class:
             mock_client = AsyncMock()
             mock_client.authenticate = AsyncMock(
-                side_effect=BCHydroAuthError("BC Hydro requires CAPTCHA for login")
+                side_effect=BCHydroLoginBlockedError("BC Hydro is refusing automated logins")
             )
             mock_client.close = AsyncMock()
             mock_api_class.return_value = mock_client
@@ -431,6 +431,7 @@ async def test_options_flow_invalid_interval(hass: HomeAssistant, mock_config_en
         assert "update_interval" in str(exc_info.value)
 
 
+@pytest.mark.usefixtures("skip_setup")
 async def test_options_flow_preselects_historical_days(
     hass: HomeAssistant, mock_config_entry
 ) -> None:
@@ -439,8 +440,12 @@ async def test_options_flow_preselects_historical_days(
     Home Assistant renders a select of plain numbers with no option selected, so
     the form looked like no history was configured at all.
     """
-    import voluptuous_serialize
     from homeassistant.helpers import config_validation as cv
+
+    try:  # Home Assistant 2026.10+ serializes forms with probatio
+        from probatio import to_field_list as convert
+    except ImportError:
+        from voluptuous_serialize import convert
 
     await hass.config_entries.async_add(mock_config_entry)
     hass.config_entries.async_update_entry(
@@ -452,7 +457,7 @@ async def test_options_flow_preselects_historical_days(
 
     fields = {
         field["name"]: field
-        for field in voluptuous_serialize.convert(
+        for field in convert(
             result["data_schema"], custom_serializer=cv.custom_serializer
         )
     }

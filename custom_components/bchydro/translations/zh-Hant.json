@@ -31,7 +31,7 @@
     },
     "error": {
       "invalid_auth": "使用者名稱或密碼無效。請檢查您的憑據。",
-      "captcha_required": "登入失敗 - BC Hydro 顯示了驗證碼。這通常表示憑據錯誤或嘗試次數過多。請驗證您的密碼並重試。",
+      "captcha_required": "BC Hydro 暫時拒絕自動登入（機器人防護）。您的密碼很可能沒有問題，請等待幾個小時後重試。",
       "cannot_connect": "無法連線至 BC Hydro。服務可能暫時不可用，請稍後重試。",
       "unknown": "發生意外錯誤",
       "name_in_use": "該名稱已被另一個 BC Hydro 帳戶使用，請另選一個。"

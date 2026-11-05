@@ -31,7 +31,7 @@
     },
     "error": {
       "invalid_auth": "Nombre de usuario o contraseña inválidos. Por favor, verifica tus credenciales.",
-      "captcha_required": "Error de inicio de sesión - BC Hydro mostró un CAPTCHA. Esto generalmente significa credenciales incorrectas o demasiados intentos. Por favor, verifica tu contraseña e intenta de nuevo.",
+      "captcha_required": "BC Hydro rechaza temporalmente los inicios de sesión automáticos (protección contra bots). Su contraseña probablemente es correcta: espere unas horas y vuelva a intentarlo.",
       "cannot_connect": "No se pudo conectar con BC Hydro. El servicio puede estar temporalmente no disponible; inténtelo de nuevo.",
       "unknown": "Ocurrió un error inesperado",
       "name_in_use": "Ese nombre ya lo usa otra cuenta de BC Hydro. Elija uno diferente."

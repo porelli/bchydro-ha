@@ -35,8 +35,9 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
     # Home Assistant stops scheduling refreshes as soon as ConfigEntryAuthFailed is
     # raised, and only a manual reauthentication brings the integration back. BC
     # Hydro's login flow fails for plenty of reasons that look like an auth problem
-    # (maintenance pages, SSO hiccups, CAPTCHA after too many logins), so require
-    # several consecutive failures before demanding the user's attention.
+    # (maintenance pages, SSO hiccups), so require several consecutive failures
+    # before demanding the user's attention. Logins turned away by BC Hydro's bot
+    # protection are not counted at all (BCHydroLoginBlockedError is transient).
     MAX_CONSECUTIVE_AUTH_FAILURES = 3
 
     def __init__(

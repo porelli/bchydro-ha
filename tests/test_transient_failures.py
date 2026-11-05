@@ -267,6 +267,7 @@ async def test_config_flow_reports_connection_error(hass: HomeAssistant) -> None
     assert result["errors"] == {"base": "cannot_connect"}
 
 
+@pytest.mark.usefixtures("skip_setup")
 async def test_reauth_flow_reports_connection_error(
     hass: HomeAssistant, mock_config_entry
 ) -> None:
