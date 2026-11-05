@@ -1,28 +1,76 @@
 name: Release
 
+# Cut a GitHub release automatically when a version tag is pushed.
+#
+# Flow:
+#   1. Bump "version" in custom_components/bchydro/manifest.json.
+#   2. Add a matching "## [x.y.z]" section to CHANGELOG.md.
+#   3. Commit, then: git tag vX.Y.Z && git push origin vX.Y.Z
+#
+# This workflow verifies the tag matches the manifest version and that a
+# CHANGELOG section exists, then creates the release using that section as the
+# notes. A tag containing a hyphen (e.g. v0.2.0-beta1) is marked as a
+# pre-release, which HACS only offers to users who opt in to betas.
+
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    name: Update manifest version
+    name: Create release
     steps:
       - uses: actions/checkout@v4
 
-      - name: Update manifest version
+      - name: Verify manifest version matches the tag
         run: |
-          version="${{ github.event.release.tag_name }}"
-          version="${version#v}"  # Remove 'v' prefix if present
-          jq --arg version "$version" '.version = $version' \
-            custom_components/bchydro/manifest.json > tmp.json
-          mv tmp.json custom_components/bchydro/manifest.json
+          tag_version="${GITHUB_REF_NAME#v}"
+          manifest_version="$(jq -r .version custom_components/bchydro/manifest.json)"
+          echo "Tag version:      $tag_version"
+          echo "Manifest version: $manifest_version"
+          if [ "$tag_version" != "$manifest_version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} implies version ${tag_version}, but manifest.json says ${manifest_version}. Bump custom_components/bchydro/manifest.json before tagging."
+            exit 1
+          fi
 
-      - name: Commit and push changes
+      - name: Extract release notes from CHANGELOG.md
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add custom_components/bchydro/manifest.json
-          git commit -m "Update version to ${{ github.event.release.tag_name }}"
-          git push origin HEAD:main
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            /^## / {
+              if (inside) { exit }
+              if (index($0, "[" ver "]")) { inside = 1; next }
+            }
+            inside { print }
+          ' CHANGELOG.md > release-notes.md
+          # Drop leading blank lines.
+          sed -i -e '/./,$!d' release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::No '## [${version}]' section found in CHANGELOG.md. Add one before tagging."
+            exit 1
+          fi
+          echo "----- release notes -----"
+          cat release-notes.md
+
+      - name: Mark pre-release for tags with a suffix
+        id: prerelease
+        run: |
+          if printf '%s' "${GITHUB_REF_NAME}" | grep -q '-'; then
+            echo "flag=--prerelease" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            ${{ steps.prerelease.outputs.flag }}
