@@ -95,7 +95,7 @@
   "issues": {
     "update_failing": {
       "title": "BC Hydro wordt niet bijgewerkt",
-      "description": "De BC Hydro-integratie ({title}) kan al {hours} uur geen gegevens ophalen. Ze blijft elk uur opnieuw proberen en dit bericht verdwijnt zodra een update slaagt.\n\nLaatste fout: {error}\n\nAls dit langer dan een dag duurt, meld het dan met uw logboeken op https://github.com/porelli/bchydro-ha/issues."
+      "description": "De BC Hydro-integratie ({title}) kan al {hours} uur geen gegevens ophalen. Ze blijft elk uur opnieuw proberen en dit bericht verdwijnt zodra een update slaagt.\n\nLaatste fout: {error}\n\nAls dit langer dan een dag duurt, meld het dan met uw logboeken op {issue_tracker}."
     }
   }
 }

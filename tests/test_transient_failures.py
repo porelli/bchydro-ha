@@ -400,6 +400,7 @@ async def test_long_outage_raises_repair_issue(
     assert issue.translation_key == "update_failing"
     assert issue.translation_placeholders["hours"] == "5"
     assert "refusing automated logins" in issue.translation_placeholders["error"]
+    assert issue.translation_placeholders["issue_tracker"].startswith("https://")
 
 
 async def test_recovery_clears_repair_issue(

@@ -95,7 +95,7 @@
   "issues": {
     "update_failing": {
       "title": "BC Hydro không cập nhật",
-      "description": "Tích hợp BC Hydro ({title}) đã không lấy được dữ liệu trong {hours} giờ. Nó tiếp tục thử lại mỗi giờ và thông báo này sẽ biến mất khi cập nhật thành công.\n\nLỗi gần nhất: {error}\n\nNếu tình trạng kéo dài hơn một ngày, vui lòng báo cáo kèm nhật ký tại https://github.com/porelli/bchydro-ha/issues."
+      "description": "Tích hợp BC Hydro ({title}) đã không lấy được dữ liệu trong {hours} giờ. Nó tiếp tục thử lại mỗi giờ và thông báo này sẽ biến mất khi cập nhật thành công.\n\nLỗi gần nhất: {error}\n\nNếu tình trạng kéo dài hơn một ngày, vui lòng báo cáo kèm nhật ký tại {issue_tracker}."
     }
   }
 }

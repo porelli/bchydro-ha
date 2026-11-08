@@ -95,7 +95,7 @@
   "issues": {
     "update_failing": {
       "title": "BC Hydro no se está actualizando",
-      "description": "La integración de BC Hydro ({title}) no ha podido obtener datos durante {hours} horas. Sigue reintentando cada hora y este mensaje desaparecerá cuando una actualización tenga éxito.\n\nÚltimo error: {error}\n\nSi esto dura más de un día, infórmelo con sus registros en https://github.com/porelli/bchydro-ha/issues."
+      "description": "La integración de BC Hydro ({title}) no ha podido obtener datos durante {hours} horas. Sigue reintentando cada hora y este mensaje desaparecerá cuando una actualización tenga éxito.\n\nÚltimo error: {error}\n\nSi esto dura más de un día, infórmelo con sus registros en {issue_tracker}."
     }
   }
 }

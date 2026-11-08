@@ -95,7 +95,7 @@
   "issues": {
     "update_failing": {
       "title": "Hindi nag-a-update ang BC Hydro",
-      "description": "Hindi nakakuha ng data ang BC Hydro integration ({title}) sa loob ng {hours} oras. Patuloy itong sumusubok bawat oras, at mawawala ang mensaheng ito kapag nagtagumpay ang isang update.\n\nHuling error: {error}\n\nKung tumagal ito nang higit sa isang araw, pakiulat ito kasama ang iyong mga log sa https://github.com/porelli/bchydro-ha/issues."
+      "description": "Hindi nakakuha ng data ang BC Hydro integration ({title}) sa loob ng {hours} oras. Patuloy itong sumusubok bawat oras, at mawawala ang mensaheng ito kapag nagtagumpay ang isang update.\n\nHuling error: {error}\n\nKung tumagal ito nang higit sa isang araw, pakiulat ito kasama ang iyong mga log sa {issue_tracker}."
     }
   }
 }

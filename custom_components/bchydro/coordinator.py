@@ -25,6 +25,9 @@ from .statistics import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Passed as a placeholder: hassfest does not allow URLs inside translations
+ISSUE_TRACKER_URL = "https://github.com/porelli/bchydro-ha/issues"
+
 
 class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
     """Class to manage fetching BC Hydro data.
@@ -173,6 +176,7 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
                 "title": self.config_entry.title,
                 "hours": str(int(failing_for.total_seconds() // 3600)),
                 "error": str(err)[:300],
+                "issue_tracker": ISSUE_TRACKER_URL,
             },
         )
 
