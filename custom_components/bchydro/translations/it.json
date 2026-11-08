@@ -91,5 +91,11 @@
         "name": "Avanzamento periodo di fatturazione"
       }
     }
+  },
+  "issues": {
+    "update_failing": {
+      "title": "BC Hydro non si aggiorna",
+      "description": "L'integrazione BC Hydro ({title}) non riesce a ottenere dati da {hours} ore. Continua a riprovare ogni ora e questo messaggio scompare quando un aggiornamento riesce.\n\nUltimo errore: {error}\n\nSe dura più di un giorno, segnalalo con i log su https://github.com/porelli/bchydro-ha/issues."
+    }
   }
 }

@@ -349,3 +349,106 @@ async def test_account_list_network_error_is_classified(mock_session) -> None:
 
     with pytest.raises(BCHydroConnectionError):
         await client.get_accounts()
+
+
+# --- coordinator: visible outages ----------------------------------------------
+
+
+def _issue(hass: HomeAssistant, coordinator):
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.bchydro.const import DOMAIN
+
+    return ir.async_get(hass).async_get_issue(DOMAIN, coordinator.repair_issue_id)
+
+
+async def test_short_outage_raises_no_repair_issue(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """A blip only marks the sensors unavailable."""
+    coordinator = _coordinator(
+        hass, mock_config_entry, BCHydroConnectionError("Network error: boom")
+    )
+
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+
+    assert coordinator.failing_since is not None
+    assert _issue(hass, coordinator) is None
+
+
+async def test_long_outage_raises_repair_issue(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """Data missing for hours must be visible outside the log."""
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    coordinator = _coordinator(
+        hass,
+        mock_config_entry,
+        api_module.BCHydroLoginBlockedError("refusing automated logins"),
+    )
+    coordinator.failing_since = dt_util.utcnow() - timedelta(hours=5)
+
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+
+    issue = _issue(hass, coordinator)
+    assert issue is not None
+    assert issue.translation_key == "update_failing"
+    assert issue.translation_placeholders["hours"] == "5"
+    assert "refusing automated logins" in issue.translation_placeholders["error"]
+
+
+async def test_recovery_clears_repair_issue(
+    hass: HomeAssistant, mock_config_entry, mock_account_profile_data
+) -> None:
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    coordinator = _coordinator(
+        hass, mock_config_entry, BCHydroConnectionError("Network error: boom")
+    )
+    coordinator.failing_since = dt_util.utcnow() - timedelta(hours=4)
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+    assert _issue(hass, coordinator) is not None
+
+    coordinator.client.get_account_profile = AsyncMock(
+        return_value=mock_account_profile_data
+    )
+    coordinator.client.get_consumption_data = AsyncMock(return_value={})
+    await coordinator._async_update_data()
+
+    assert coordinator.failing_since is None
+    assert _issue(hass, coordinator) is None
+
+
+async def test_success_clears_issue_left_by_a_previous_coordinator(
+    hass: HomeAssistant, mock_config_entry, mock_account_profile_data
+) -> None:
+    """A reload starts without failure state but must still clear the issue."""
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.bchydro.const import DOMAIN
+
+    coordinator = _coordinator(hass, mock_config_entry, None)
+    coordinator.client.get_account_profile = AsyncMock(
+        return_value=mock_account_profile_data
+    )
+    coordinator.client.get_consumption_data = AsyncMock(return_value={})
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        coordinator.repair_issue_id,
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="update_failing",
+    )
+
+    await coordinator._async_update_data()
+
+    assert _issue(hass, coordinator) is None

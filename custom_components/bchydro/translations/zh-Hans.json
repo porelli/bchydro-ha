@@ -91,5 +91,11 @@
         "name": "账单周期进度"
       }
     }
+  },
+  "issues": {
+    "update_failing": {
+      "title": "BC Hydro 未在更新",
+      "description": "BC Hydro 集成（{title}）已有 {hours} 小时无法获取数据。它会每小时重试一次，更新成功后此消息会自动消失。\n\n最近的错误：{error}\n\n如果持续超过一天，请附上日志在 https://github.com/porelli/bchydro-ha/issues 报告。"
+    }
   }
 }

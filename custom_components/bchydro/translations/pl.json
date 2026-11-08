@@ -91,5 +91,11 @@
         "name": "Postęp okresu rozliczeniowego"
       }
     }
+  },
+  "issues": {
+    "update_failing": {
+      "title": "BC Hydro się nie aktualizuje",
+      "description": "Integracja BC Hydro ({title}) od {hours} godz. nie może pobrać danych. Ponawia próbę co godzinę, a ten komunikat zniknie po udanej aktualizacji.\n\nOstatni błąd: {error}\n\nJeśli trwa to dłużej niż dzień, zgłoś to wraz z logami na https://github.com/porelli/bchydro-ha/issues."
+    }
   }
 }

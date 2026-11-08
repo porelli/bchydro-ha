@@ -8,10 +8,12 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
     UpdateFailed,
 )
+from homeassistant.util import dt as dt_util
 
 from .api import BCHydroApiClient, BCHydroApiError, BCHydroAuthError
 from .const import DOMAIN, UPDATE_INTERVAL_MINUTES
@@ -40,6 +42,11 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
     # protection are not counted at all (BCHydroLoginBlockedError is transient).
     MAX_CONSECUTIVE_AUTH_FAILURES = 3
 
+    # Failures that are not about the password only mark the sensors unavailable
+    # and write to the log, which is easy to miss. Once data has been missing
+    # this long, also raise an issue under Settings > System > Repairs.
+    REPAIR_ISSUE_AFTER = timedelta(hours=3)
+
     def __init__(
         self,
         hass: HomeAssistant,
@@ -61,6 +68,7 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
         self.client = client
         self._historical_fetched = False  # Track if we've fetched historical data
         self.consecutive_auth_failures = 0
+        self.failing_since: datetime | None = None
         # Each configured account keeps its statistics separate; the first one
         # configured keeps the original ids (see statistics.account_statistics).
         self.statistics = account_statistics(
@@ -130,7 +138,57 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
 
         return daily_consumption
 
+    @property
+    def repair_issue_id(self) -> str:
+        """Id of the repair issue reporting that this entry stopped updating."""
+        return f"update_failing_{self.config_entry.entry_id}"
+
     async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch data from BC Hydro, reporting outages that last too long."""
+        try:
+            data = await self._fetch_data()
+        except UpdateFailed as err:
+            self._record_failure(err)
+            raise
+        self._record_success()
+        return data
+
+    def _record_failure(self, err: Exception) -> None:
+        """Raise (or refresh) the repair issue once data is missing for too long."""
+        now = dt_util.utcnow()
+        if self.failing_since is None:
+            self.failing_since = now
+        failing_for = now - self.failing_since
+        if failing_for < self.REPAIR_ISSUE_AFTER:
+            return
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            self.repair_issue_id,
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="update_failing",
+            translation_placeholders={
+                "title": self.config_entry.title,
+                "hours": str(int(failing_for.total_seconds() // 3600)),
+                "error": str(err)[:300],
+            },
+        )
+
+    def _record_success(self) -> None:
+        """Clear the outage state and its repair issue."""
+        if self.failing_since is not None:
+            _LOGGER.info(
+                "BC Hydro is updating again after %s without data",
+                dt_util.utcnow() - self.failing_since,
+            )
+            self.failing_since = None
+        # Also clears an issue left behind by an earlier coordinator (a reload
+        # starts with no failure state); a no-op when there is none.
+        ir.async_delete_issue(self.hass, DOMAIN, self.repair_issue_id)
+
+    async def _fetch_data(self) -> dict[str, Any]:
         """Fetch data from BC Hydro."""
         try:
             # Get account profile data

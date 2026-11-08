@@ -240,11 +240,19 @@ class BCHydroApiClient:
             if self._provided_session:
                 session = self._provided_session
             else:
-                if not self._session:
-                    self._session = aiohttp.ClientSession(
-                        cookie_jar=self._cookie_jar,
-                        timeout=DEFAULT_TIMEOUT,
-                    )
+                # Always sign in from a clean cookie jar. BC Hydro ends a login
+                # after about two hours whatever its activity, and answers a
+                # password login that still carries the expired session's
+                # cookies with a 401, then with the login page on every later
+                # attempt - the integration stayed offline until a restart.
+                if self._session:
+                    await self._session.close()
+                self._cookie_jar = aiohttp.CookieJar()
+                self._cookies = {}
+                self._session = aiohttp.ClientSession(
+                    cookie_jar=self._cookie_jar,
+                    timeout=DEFAULT_TIMEOUT,
+                )
                 session = self._session
 
             async with session.post(

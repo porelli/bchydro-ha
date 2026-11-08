@@ -304,3 +304,48 @@ async def test_setup_schedules_keepalive(
         )
         await hass.async_block_till_done()
         client.keep_alive.assert_awaited_once()
+
+
+# --- re-login after expiry -----------------------------------------------------
+
+
+async def test_relogin_starts_from_a_fresh_cookie_jar() -> None:
+    """A password login must never reuse the cookies of an expired session.
+
+    BC Hydro caps a login at about two hours. Signing in again on the old
+    cookie jar is answered with a 401 ("invalid password") and then the login
+    page on every later attempt, so the integration stayed offline until Home
+    Assistant was restarted. A fresh jar logs in normally.
+    """
+    sessions: list[MagicMock] = []
+    jars: list[object] = []
+
+    def make_session(*_args, cookie_jar=None, **_kwargs):
+        session = MagicMock()
+        session.close = AsyncMock()
+        session.cookie_jar = cookie_jar
+        response = AsyncMock()
+        response.status = 200
+        response.url = URL("https://app.bchydro.com/BCHCustomerPortal/web/accountsOverview.html")
+        response.text = AsyncMock(return_value='<input name="bchydroparam" value="token"/>')
+        response.__aenter__.return_value = response
+        session.post.return_value = response
+        sessions.append(session)
+        jars.append(cookie_jar)
+        return session
+
+    with patch(
+        "custom_components.bchydro.api.aiohttp.ClientSession", side_effect=make_session
+    ):
+        client = BCHydroApiClient("test@example.com", "password")
+        await client.authenticate()
+        # The expired session left a cookie behind
+        _set_cookie(client._cookie_jar, "iPlanetDirectoryPro", "/")
+        client._authenticated = False  # what keep_alive() does on expiry
+
+        await client.authenticate()
+
+    assert len(sessions) == 2
+    sessions[0].close.assert_awaited_once()
+    assert jars[1] is not jars[0]
+    assert [cookie.key for cookie in jars[1] if cookie.key == "iPlanetDirectoryPro"] == []

@@ -91,5 +91,11 @@
         "name": "청구 기간 진행률"
       }
     }
+  },
+  "issues": {
+    "update_failing": {
+      "title": "BC Hydro가 업데이트되지 않음",
+      "description": "BC Hydro 통합({title})이 {hours}시간 동안 데이터를 가져오지 못했습니다. 매시간 다시 시도하며, 업데이트가 성공하면 이 메시지는 사라집니다.\n\n마지막 오류: {error}\n\n하루 이상 지속되면 로그와 함께 https://github.com/porelli/bchydro-ha/issues 에 신고해 주세요."
+    }
   }
 }

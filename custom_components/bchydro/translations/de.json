@@ -91,5 +91,11 @@
         "name": "Abrechnungszeitraum Fortschritt"
       }
     }
+  },
+  "issues": {
+    "update_failing": {
+      "title": "BC Hydro aktualisiert nicht",
+      "description": "Die BC Hydro-Integration ({title}) konnte seit {hours} Stunden keine Daten abrufen. Sie versucht es stündlich erneut, und diese Meldung verschwindet, sobald eine Aktualisierung gelingt.\n\nLetzter Fehler: {error}\n\nWenn dies länger als einen Tag anhält, melden Sie es bitte mit Ihren Protokollen unter https://github.com/porelli/bchydro-ha/issues."
+    }
   }
 }

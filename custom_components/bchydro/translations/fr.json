@@ -91,5 +91,11 @@
         "name": "Progression de la période de facturation"
       }
     }
+  },
+  "issues": {
+    "update_failing": {
+      "title": "BC Hydro ne se met pas à jour",
+      "description": "L'intégration BC Hydro ({title}) n'a pas pu obtenir de données depuis {hours} heures. Elle réessaie toutes les heures, et ce message disparaîtra dès qu'une mise à jour réussira.\n\nDernière erreur : {error}\n\nSi cela dure plus d'une journée, veuillez le signaler avec vos journaux sur https://github.com/porelli/bchydro-ha/issues."
+    }
   }
 }
