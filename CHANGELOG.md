@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-09
+
+### Fixed
+- Energy dashboard figures now follow BC Hydro's corrections. BC Hydro revises
+  data it already published, sometimes weeks later: it relabelled the hours
+  around its November 2026 clock change (BC itself stayed on UTC-7), and
+  revised whole days of readings by up to 4.8 kWh. The integration never
+  updated an hour once recorded, so those days stayed wrong. Every import now
+  rebuilds the last 30 days from BC Hydro's current data, writing only from the
+  first hour that differs. On one account this brought every day from Oct 20
+  to Nov 8 in line with BC Hydro's own daily totals (13 of 20 before); the
+  first import after updating repairs existing history the same way.
+- Daily figures (yesterday's consumption and cost, the daily breakdown) follow
+  BC's clock again. BC Hydro labels its data -08:00 while BC is at UTC-7, so
+  since November 1 days were split at 1 AM and "yesterday" was an hour short.
+- The *Rate plan* sensor showed "unknown" on every account: it read a field BC
+  Hydro does not send. It now shows the plan BC Hydro reports (for example
+  "Residential tiered rate"), with the plan code in its attributes.
+
 ## [0.2.0] - 2026-11-09
 
 ### Added

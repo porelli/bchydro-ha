@@ -159,7 +159,11 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
                 if not timestamp_str:
                     continue
 
-                timestamp = datetime.fromisoformat(timestamp_str)
+                # Days follow BC's clock (Home Assistant's time zone), not the
+                # offset on BC Hydro's label: since November 2026 BC stays on
+                # UTC-7 while BC Hydro still writes -08:00, so its days run
+                # 23:00-08:00 to 23:00-08:00 and the label's date splits them.
+                timestamp = dt_util.as_local(datetime.fromisoformat(timestamp_str))
                 date_key = timestamp.date().isoformat()
 
                 # Sum up consumption and cost for this date

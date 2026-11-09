@@ -276,20 +276,28 @@ async def test_import_statistics_continues_from_existing(
         {STATISTIC_ID_COST: [{"start": last_timestamp.timestamp(), "sum": 10.0}]},
         # _get_earliest_statistics_timestamp
         {STATISTIC_ID_ENERGY: [{"start": last_timestamp.timestamp(), "sum": 100.0}]},
+        # _get_stored_window: the hour already recorded
+        {
+            STATISTIC_ID_ENERGY: [{"start": last_timestamp.timestamp(), "state": 1.0, "sum": 100.0}],
+            STATISTIC_ID_COST: [{"start": last_timestamp.timestamp(), "state": 0.10, "sum": 10.0}],
+        },
     ]
 
     mock_api_client = AsyncMock()
     mock_api_client.get_consumption_data.return_value = {
         "hourly_consumption": [
-            {"date_time": "2025-12-25T10:00:00-08:00", "value": 1.0, "cost": 0.10, "quality": "ACTUAL"},  # Old, skipped
+            {"date_time": "2025-12-25T10:00:00-08:00", "value": 1.0, "cost": 0.10, "quality": "ACTUAL"},  # Recorded
             {"date_time": "2025-12-25T11:00:00-08:00", "value": 2.0, "cost": 0.20, "quality": "ACTUAL"},  # New
         ]
     }
 
     await async_import_statistics(hass, mock_api_client, historical_days=7)
 
-    # Should still call add_statistics
     assert mock_add_statistics.call_count == 2
+    energy_rows = mock_add_statistics.call_args_list[0][0][2]
+    # The recorded hour is left alone; only the new one is written, continuing
+    # from the recorded total
+    assert [(r["state"], r["sum"]) for r in energy_rows] == [(2.0, 102.0)]
 
 
 async def test_import_statistics_api_error_on_backfill(
@@ -340,6 +348,17 @@ async def test_import_statistics_all_data_already_imported(
         {STATISTIC_ID_COST: [{"start": last_timestamp.timestamp(), "sum": 10.0}]},
         # _get_earliest_statistics_timestamp
         {STATISTIC_ID_ENERGY: [{"start": earliest_timestamp.timestamp(), "sum": 1.0}]},
+        # _get_stored_window: both hours already recorded with BC Hydro's values
+        {
+            STATISTIC_ID_ENERGY: [
+                {"start": datetime(2025, 12, 25, 18, tzinfo=timezone.utc).timestamp(), "state": 1.0, "sum": 99.0},
+                {"start": datetime(2025, 12, 25, 19, tzinfo=timezone.utc).timestamp(), "state": 2.0, "sum": 101.0},
+            ],
+            STATISTIC_ID_COST: [
+                {"start": datetime(2025, 12, 25, 18, tzinfo=timezone.utc).timestamp(), "state": 0.10, "sum": 9.9},
+                {"start": datetime(2025, 12, 25, 19, tzinfo=timezone.utc).timestamp(), "state": 0.20, "sum": 10.1},
+            ],
+        },
     ]
 
     mock_api_client = AsyncMock()

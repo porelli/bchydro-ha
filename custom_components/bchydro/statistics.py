@@ -339,6 +339,131 @@ def _convert_hourly_data_to_statistics(
     return statistics_energy, statistics_cost, cumulative_sum_energy, cumulative_sum_cost
 
 
+# BC Hydro corrects data it already published: it relabelled the hours around
+# its November 2026 clock change days later, and revised whole days of readings
+# (Oct 23-26 and Nov 4 2026, by up to 4.8 kWh a day) more than two weeks after
+# first publishing them. Every import rebuilds this many days before the last
+# recorded hour from BC Hydro's current data, so corrections reach the Energy
+# dashboard.
+REWRITE_DAYS = 30
+
+
+class StoredHour(NamedTuple):
+    """One recorded hour of a statistic."""
+
+    state: float
+    sum: float
+
+
+async def _get_stored_window(
+    hass: HomeAssistant, stats: AccountStatistics, window_start: datetime
+) -> tuple[dict[datetime, StoredHour], dict[datetime, StoredHour], float, float]:
+    """Read recorded hours from window_start on, and the sums just before it.
+
+    Returns:
+        (energy hours, cost hours, energy sum before the window, cost sum before)
+    """
+    # A few days before the window, to find the last sum preceding it
+    rows = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        window_start - timedelta(days=3),
+        None,
+        {stats.energy_id, stats.cost_id},
+        "hour",
+        None,
+        {"state", "sum"},
+    )
+
+    def split(statistic_id: str) -> tuple[dict[datetime, StoredHour], float]:
+        hours: dict[datetime, StoredHour] = {}
+        base: float | None = None
+        for row in rows.get(statistic_id, []):
+            start = datetime.fromtimestamp(row["start"], tz=timezone.utc)
+            if start < window_start:
+                base = float(row.get("sum") or 0.0)
+            else:
+                hours[start] = StoredHour(float(row.get("state") or 0.0), float(row.get("sum") or 0.0))
+        if base is None:
+            # Nothing recorded before the window (it starts at the first hour):
+            # continue from whatever total the first hour was recorded on top of
+            first = hours[min(hours)] if hours else None
+            base = first.sum - first.state if first else 0.0
+        return hours, base
+
+    energy, energy_base = split(stats.energy_id)
+    cost, cost_base = split(stats.cost_id)
+    return energy, cost, energy_base, cost_base
+
+
+def _merge_window(
+    hourly_data: list[dict[str, Any]],
+    window_start: datetime,
+    stored_energy: dict[datetime, StoredHour],
+    stored_cost: dict[datetime, StoredHour],
+    energy_base: float,
+    cost_base: float,
+) -> tuple[list[StatisticData], list[StatisticData], bool]:
+    """Rebuild the window's hours from BC Hydro's current data.
+
+    BC Hydro's ACTUAL readings win; an hour BC Hydro no longer reports as ACTUAL
+    keeps its recorded value, so a temporary INVALID never erases history. Sums
+    are recomputed from the last recorded sum before the window.
+
+    Returns:
+        (energy rows, cost rows, whether anything differs from what is recorded).
+        The rows start at the first hour that differs: earlier ones are left
+        alone, later ones carry the corrected running totals.
+    """
+    fresh: dict[datetime, tuple[float, float]] = {}
+    for entry in hourly_data:
+        if entry.get("quality") != "ACTUAL" or not entry.get("date_time"):
+            continue
+        try:
+            start = (
+                datetime.fromisoformat(str(entry["date_time"]))
+                .replace(minute=0, second=0, microsecond=0)
+                .astimezone(timezone.utc)
+            )
+        except ValueError:
+            continue
+        if start < window_start:
+            continue
+        try:
+            cost = float(entry.get("cost") or 0)
+        except (TypeError, ValueError):
+            cost = 0.0
+        fresh[start] = (float(entry.get("value") or 0), cost)
+
+    energy_rows: list[StatisticData] = []
+    cost_rows: list[StatisticData] = []
+    energy_sum, cost_sum = energy_base, cost_base
+    first_change: int | None = None
+    for start in sorted(set(fresh) | set(stored_energy)):
+        if start in fresh:
+            energy, cost = fresh[start]
+        else:
+            energy = stored_energy[start].state
+            cost = stored_cost[start].state if start in stored_cost else 0.0
+        energy_sum += energy
+        cost_sum += cost
+        old_energy, old_cost = stored_energy.get(start), stored_cost.get(start)
+        if (
+            old_energy is None
+            or old_cost is None
+            or abs(old_energy.state - energy) > 1e-9
+            or abs(old_energy.sum - energy_sum) > 1e-6
+            or abs(old_cost.state - cost) > 1e-9
+            or abs(old_cost.sum - cost_sum) > 1e-6
+        ) and first_change is None:
+            first_change = len(energy_rows)
+        energy_rows.append(StatisticData(start=start, state=energy, sum=energy_sum))
+        cost_rows.append(StatisticData(start=start, state=cost, sum=cost_sum))
+    if first_change is None:
+        return [], [], False
+    return energy_rows[first_change:], cost_rows[first_change:], True
+
+
 async def async_import_statistics(
     hass: HomeAssistant,
     api_client: Any,
@@ -400,20 +525,19 @@ async def async_import_statistics(
             cumulative_energy, cumulative_cost = 0.0, 0.0
             _LOGGER.debug("Fetch mode: FULL HISTORY (cleared existing)")
         elif last_timestamp:
-            # Have existing stats - only fetch since last recorded (with buffer)
-            # Convert to Pacific time for proper date boundary handling
-            # BC Hydro API uses Pacific dates, so we need to go back at least 1 day
-            # to catch any new data that became ACTUAL since last import
-            last_timestamp_pacific = last_timestamp.astimezone(pacific_tz)
-            # Start from the beginning of the day before the last timestamp
-            # This ensures we catch new data as it becomes ACTUAL
-            fetch_start = (last_timestamp_pacific - timedelta(days=2)).replace(
-                hour=0, minute=0, second=0, microsecond=0
+            # Have existing stats: fetch the rewrite window before the last
+            # recorded hour, plus everything newer
+            window_start = (last_timestamp - timedelta(days=REWRITE_DAYS)).replace(
+                minute=0, second=0, microsecond=0
             )
+            if earliest_existing and window_start < earliest_existing:
+                window_start = earliest_existing
+            # A day of margin: BC Hydro's day boundaries are not ours
+            fetch_start = (window_start - timedelta(days=1)).astimezone(pacific_tz)
             _LOGGER.debug(
-                "Fetch mode: INCREMENTAL from %s (last_timestamp_pacific=%s) to %s",
-                fetch_start.isoformat(),
-                last_timestamp_pacific.isoformat(),
+                "Fetch mode: REWRITE from %s (last recorded %s) to %s",
+                window_start.isoformat(),
+                last_timestamp.isoformat(),
                 now.isoformat(),
             )
         else:
@@ -474,23 +598,41 @@ async def async_import_statistics(
             last_timestamp.isoformat() if last_timestamp else "None",
         )
 
-        # Check if there's any new data to import
-        if last_timestamp and latest_actual_ts and latest_actual_ts <= last_timestamp:
-            _LOGGER.debug(
-                "No new data available: latest ACTUAL (%s) <= last recorded (%s). "
-                "BC Hydro has ~1.5-2 day data lag.",
-                latest_actual_ts.isoformat(),
-                last_timestamp.isoformat(),
+        if last_timestamp:
+            # Rebuild the window from BC Hydro's current data
+            stored_energy, stored_cost, energy_base, cost_base = await _get_stored_window(
+                hass, stats, window_start
             )
-            return
-
-        # Convert hourly data to statistics format
-        stats_energy, stats_cost, final_energy, final_cost = _convert_hourly_data_to_statistics(
-            consumption_list,
-            cumulative_energy,
-            cumulative_cost,
-            last_timestamp,
-        )
+            stats_energy, stats_cost, changed = _merge_window(
+                consumption_list,
+                window_start,
+                stored_energy,
+                stored_cost,
+                energy_base,
+                cost_base,
+            )
+            if not changed:
+                _LOGGER.debug("Statistics are up to date with BC Hydro")
+                return
+            new_hours = sum(1 for row in stats_energy if row["start"] not in stored_energy)
+            _LOGGER.debug(
+                "Rewriting %d hours (%d new) from %s",
+                len(stats_energy),
+                new_hours,
+                window_start.isoformat(),
+            )
+            final_energy = stats_energy[-1]["sum"] if stats_energy else energy_base
+            final_cost = stats_cost[-1]["sum"] if stats_cost else cost_base
+        else:
+            # Convert hourly data to statistics format
+            stats_energy, stats_cost, final_energy, final_cost = (
+                _convert_hourly_data_to_statistics(
+                    consumption_list,
+                    cumulative_energy,
+                    cumulative_cost,
+                    last_timestamp,
+                )
+            )
 
         # Import statistics
         if stats_energy or stats_cost:

@@ -58,6 +58,13 @@ CREDENTIAL_REJECTED_MARKERS = (
 )
 
 
+# BC Hydro's rate plan codes, as sent in global-data's ratePlanType. Unknown
+# codes are shown as they are.
+RATE_PLAN_NAMES = {
+    "RIB": "Residential tiered rate",  # Residential Inclining Block (Step 1/2)
+}
+
+
 def _login_page_message(page_html: str) -> str:
     """Return the visible error text of a returned login page, if any.
 
@@ -858,8 +865,11 @@ class BCHydroApiClient:
                 "evpProfileId": json_data.get("evpProfileId"),
                 "evpRateGroup": json_data.get("evpRateGroup"),
                 "evpRateCategory": json_data.get("evpRateCategory"),
-                "ratePlanType": json_data.get("evpRateGroup"),
-                "ratePlanName": json_data.get("evpRateGroup"),
+                # BC Hydro sends the plan as a code ("RIB"); there is no
+                # evpRateGroup or plan name in global-data
+                "ratePlanType": (plan := json_data.get("ratePlanType")),
+                "ratePlanName": RATE_PLAN_NAMES.get(plan, plan) if plan else None,
+                "isRIB": plan == "RIB" if plan else None,
                 "evpBillingStart": json_data.get("evpBillingStart"),
                 "evpBillingEnd": json_data.get("evpBillingEnd"),
                 "evpCurrentDateTime": json_data.get("evpCurrentDateTime"),
