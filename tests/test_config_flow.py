@@ -384,51 +384,90 @@ async def test_reauth_flow_unknown_error(hass: HomeAssistant, mock_config_entry)
         assert result2["errors"] == {"base": "unknown"}
 
 
-async def test_options_flow(hass: HomeAssistant, mock_config_entry) -> None:
-    """Test options flow."""
-    # Mock setup to avoid platform loading
-    with patch("custom_components.bchydro.async_setup_entry", return_value=True):
-        # Set the entry state to loaded
-        mock_config_entry._state = config_entries.ConfigEntryState.LOADED
-        # Add entry to hass
-        await hass.config_entries.async_add(mock_config_entry)
-
-        result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-
-        assert result["type"] == FlowResultType.FORM
-        assert result["step_id"] == "init"
-
-        result2 = await hass.config_entries.options.async_configure(
-            result["flow_id"],
-            user_input={"update_interval": 120},
-        )
-
-        assert result2["type"] == FlowResultType.CREATE_ENTRY
-        assert mock_config_entry.options["update_interval"] == 120
+def _defaults(result) -> dict:
+    return {str(key): key.default() for key in result["data_schema"].schema}
 
 
+@pytest.mark.usefixtures("skip_setup")
+async def test_options_flow_daily_path(hass: HomeAssistant, mock_config_entry) -> None:
+    """Step 1 picks the schedule; step 2 only asks what the daily one needs."""
+    await hass.config_entries.async_add(mock_config_entry)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={"update_interval": 45, "update_mode": "interval"}
+    )
+
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    assert result["step_id"] == "init"
+    assert set(_defaults(result)) == {"update_mode", "historical_days"}
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"update_mode": "daily", "historical_days": "7"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "daily"
+    assert set(_defaults(result)) == {"daily_check_time", "daily_retry_minutes"}
+    assert _defaults(result)["daily_check_time"] == "08:00:00"
+    assert _defaults(result)["daily_retry_minutes"] == "60"  # retries on by default
+    assert result["description_placeholders"]["arrival_typical"] == "—"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"daily_check_time": "07:30:00", "daily_retry_minutes": "30"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert mock_config_entry.options == {
+        "update_mode": "daily",
+        "daily_check_time": "07:30:00",
+        "daily_retry_minutes": 30,
+        "historical_days": 7,
+        # Kept, so switching back to fixed interval restores it
+        "update_interval": 45,
+    }
+
+
+@pytest.mark.usefixtures("skip_setup")
+async def test_options_flow_interval_path(hass: HomeAssistant, mock_config_entry) -> None:
+    """The fixed-interval step asks only for the interval."""
+    await hass.config_entries.async_add(mock_config_entry)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={"daily_check_time": "07:15:00"}
+    )
+
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"update_mode": "interval", "historical_days": "30"}
+    )
+    assert result["step_id"] == "interval"
+    assert set(_defaults(result)) == {"update_interval"}
+    assert _defaults(result)["update_interval"] == 60
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"update_interval": 120}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert mock_config_entry.options == {
+        "update_mode": "interval",
+        "update_interval": 120,
+        "historical_days": 30,
+        "daily_check_time": "07:15:00",
+    }
+
+
+@pytest.mark.usefixtures("skip_setup")
 async def test_options_flow_invalid_interval(hass: HomeAssistant, mock_config_entry) -> None:
-    """Test options flow with invalid update interval."""
+    """The interval is still validated on its own step."""
     from homeassistant.data_entry_flow import InvalidData
 
-    # Mock setup to avoid platform loading
-    with patch("custom_components.bchydro.async_setup_entry", return_value=True):
-        # Set the entry state to loaded
-        mock_config_entry._state = config_entries.ConfigEntryState.LOADED
-        # Add entry to hass
-        await hass.config_entries.async_add(mock_config_entry)
+    await hass.config_entries.async_add(mock_config_entry)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"update_mode": "interval", "historical_days": "7"}
+    )
 
-        result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-
-        # Try to set invalid interval (too low) - should raise InvalidData
-        with pytest.raises(InvalidData) as exc_info:
-            await hass.config_entries.options.async_configure(
-                result["flow_id"],
-                user_input={"update_interval": 5},  # Below minimum of 30
-            )
-
-        # Verify the exception contains the validation error
-        assert "update_interval" in str(exc_info.value)
+    with pytest.raises(InvalidData) as exc_info:
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {"update_interval": 5}  # below the minimum of 30
+        )
+    assert "update_interval" in str(exc_info.value)
 
 
 @pytest.mark.usefixtures("skip_setup")
@@ -453,13 +492,9 @@ async def test_options_flow_preselects_historical_days(
     )
 
     result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
-
     fields = {
         field["name"]: field
-        for field in convert(
-            result["data_schema"], custom_serializer=cv.custom_serializer
-        )
+        for field in convert(result["data_schema"], custom_serializer=cv.custom_serializer)
     }
     days = fields["historical_days"]
     option_values = [value for value, _label in days["options"]]
@@ -467,12 +502,16 @@ async def test_options_flow_preselects_historical_days(
     # The frontend compares the selected value against stringified option values,
     # so numeric choices never light up a radio button.
     assert all(isinstance(value, str) for value in option_values), option_values
-    assert days["default"] in option_values
     assert days["default"] == "30"
+    # 120 minutes was a deliberate choice: the form keeps the fixed interval
+    assert fields["update_mode"]["default"] == "interval"
 
     # Submitting keeps the stored value numeric for the statistics import
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"update_interval": 120, "historical_days": "60"}
+        result["flow_id"], {"update_mode": "interval", "historical_days": "60"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"update_interval": 120}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["historical_days"] == 60

@@ -39,6 +39,7 @@ from .const import (
     DOMAIN,
     PARALLEL_UPDATES,
     SENSOR_BILLING_PERCENTAGE,
+    SENSOR_DATA_ARRIVAL_TIME,
     SENSOR_BILLING_PERIOD_START,
     SENSOR_CONSUMPTION_TO_DATE,
     SENSOR_COST_TO_DATE,
@@ -274,6 +275,22 @@ SENSOR_TYPES: tuple[BCHydroSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement="%",
         value_fn=lambda data: data.get("profile", {}).get("yesterdayPercentage"),
+    ),
+    BCHydroSensorEntityDescription(
+        # When BC Hydro usually publishes this account's data ("HH:MM", local
+        # time), learned from the daily checks. Helps pick the check time.
+        key=SENSOR_DATA_ARRIVAL_TIME,
+        translation_key="data_arrival_time",
+        icon="mdi:clock-check-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # "HH:MM" once arrivals have been timed, "≤HH:MM" while all that is
+        # known is that the data was already there at the check
+        value_fn=lambda data: (data.get("arrival") or {}).get("state"),
+        attr_fn=lambda data: {
+            key: value
+            for key, value in (data.get("arrival") or {}).items()
+            if key != "state"
+        },
     ),
 )
 

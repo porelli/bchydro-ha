@@ -45,15 +45,36 @@
   "options": {
     "step": {
       "init": {
-        "title": "Tùy chọn BC Hydro",
-        "description": "Cấu hình các tùy chọn tích hợp BC Hydro.",
+        "title": "Lịch cập nhật",
+        "description": "Tích hợp nên kiểm tra dữ liệu mới từ BC Hydro thế nào? Màn hình tiếp theo có các cài đặt cho lịch bạn chọn.",
         "data": {
-          "update_interval": "Khoảng thời gian cập nhật (phút)",
+          "update_mode": "Khi nào kiểm tra",
           "historical_days": "Dữ liệu lịch sử (ngày)"
         },
         "data_description": {
-          "update_interval": "Tần suất lấy dữ liệu từ BC Hydro (30-1440 phút). Mặc định: 60 phút.",
           "historical_days": "Số ngày dữ liệu lịch sử cần nhập cho Bảng điều khiển Năng lượng. Mặc định: 7 ngày."
+        }
+      },
+      "daily": {
+        "title": "Kiểm tra hằng ngày",
+        "description": "BC Hydro công bố mức sử dụng mỗi ngày một lần. Từ giờ bên dưới, tích hợp tìm dữ liệu của ngày đó; nếu chưa có, nó kiểm tra lại theo cài đặt bên dưới cho đến khi có, rồi chờ đến ngày hôm sau.\n\nThời điểm dữ liệu mới đến với tài khoản này (30 ngày qua): thường lúc {arrival_typical}, sớm nhất {arrival_earliest}, muộn nhất {arrival_latest}. Đo được trong {arrival_days} ngày; thêm {arrival_untimed_days} ngày dữ liệu đã có sẵn khi kiểm tra, thường trước {arrival_ready_by}, nên dữ liệu đến sớm hơn thế.",
+        "data": {
+          "daily_check_time": "Bắt đầu kiểm tra lúc",
+          "daily_retry_minutes": "Nếu dữ liệu chưa có, kiểm tra lại"
+        },
+        "data_description": {
+          "daily_check_time": "Giờ địa phương. Đặt ngay sau giờ dữ liệu thường đến thì hầu hết các ngày chỉ cần một lần kiểm tra.",
+          "daily_retry_minutes": "Kiểm tra lại giúp có dữ liệu sớm hơn và, với khoảng cách tối đa 2 giờ, đo được lúc dữ liệu đến. Mỗi lần kiểm tra là một lần đăng nhập BC Hydro."
+        }
+      },
+      "interval": {
+        "title": "Khoảng thời gian cố định",
+        "description": "Tích hợp kiểm tra BC Hydro suốt ngày đêm theo khoảng thời gian này, dù có dự kiến dữ liệu mới hay không.",
+        "data": {
+          "update_interval": "Kiểm tra mỗi (phút)"
+        },
+        "data_description": {
+          "update_interval": "Từ 30 đến 1440 phút. Mặc định: 60."
         }
       }
     }
@@ -89,6 +110,9 @@
       },
       "billing_percentage": {
         "name": "Tiến độ kỳ thanh toán"
+      },
+      "data_arrival_time": {
+        "name": "Giờ dữ liệu đến"
       }
     }
   },
@@ -96,6 +120,24 @@
     "update_failing": {
       "title": "BC Hydro không cập nhật",
       "description": "Tích hợp BC Hydro ({title}) đã không lấy được dữ liệu trong {hours} giờ. Nó tiếp tục thử lại mỗi giờ và thông báo này sẽ biến mất khi cập nhật thành công.\n\nLỗi gần nhất: {error}\n\nNếu tình trạng kéo dài hơn một ngày, vui lòng báo cáo kèm nhật ký tại {issue_tracker}."
+    }
+  },
+  "selector": {
+    "update_mode": {
+      "options": {
+        "daily": "Mỗi ngày một lần, khi BC Hydro công bố (khuyến nghị)",
+        "interval": "Theo khoảng thời gian cố định, suốt ngày đêm"
+      }
+    },
+    "daily_retry_minutes": {
+      "options": {
+        "15": "Mỗi 15 phút",
+        "30": "Mỗi 30 phút",
+        "60": "Mỗi giờ (khuyến nghị)",
+        "120": "Mỗi 2 giờ",
+        "180": "Mỗi 3 giờ",
+        "0": "Không kiểm tra đến ngày mai"
+      }
     }
   }
 }

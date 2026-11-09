@@ -45,15 +45,36 @@
   "options": {
     "step": {
       "init": {
-        "title": "BC Hydro Options",
-        "description": "Configure BC Hydro integration options.",
+        "title": "Update schedule",
+        "description": "How should the integration check BC Hydro for new data? The next screen has the settings for the schedule you pick.",
         "data": {
-          "update_interval": "Update interval (minutes)",
+          "update_mode": "When to check",
           "historical_days": "Historical data (days)"
         },
         "data_description": {
-          "update_interval": "How often to fetch data from BC Hydro (30-1440 minutes). Default: 60 minutes.",
           "historical_days": "How many days of historical data to import for the Energy Dashboard. Default: 7 days."
+        }
+      },
+      "daily": {
+        "title": "Daily check",
+        "description": "BC Hydro publishes usage once a day. From the time below, the integration looks for that day's data; if it isn't there yet, it checks again as set below until it arrives, then waits until the next day.\n\nWhen new data has been arriving for this account (last 30 days): typical {arrival_typical}, earliest {arrival_earliest}, latest {arrival_latest}. Timed on {arrival_days} days; on {arrival_untimed_days} more the data was already there when checked, usually by {arrival_ready_by}, so it arrives earlier than that.",
+        "data": {
+          "daily_check_time": "Start checking at",
+          "daily_retry_minutes": "If the data isn't there yet, check again"
+        },
+        "data_description": {
+          "daily_check_time": "Local time. Just after your usual arrival time means a single check on most days.",
+          "daily_retry_minutes": "Retries get the data sooner and, up to every 2 hours apart, time when it arrives. Each check is a login to BC Hydro."
+        }
+      },
+      "interval": {
+        "title": "Fixed interval",
+        "description": "The integration checks BC Hydro around the clock at this interval, whether or not new data is expected.",
+        "data": {
+          "update_interval": "Check every (minutes)"
+        },
+        "data_description": {
+          "update_interval": "30 to 1440 minutes. Default: 60."
         }
       }
     }
@@ -89,6 +110,9 @@
       },
       "billing_percentage": {
         "name": "Billing period progress"
+      },
+      "data_arrival_time": {
+        "name": "Data arrival time"
       }
     }
   },
@@ -96,6 +120,24 @@
     "update_failing": {
       "title": "BC Hydro is not updating",
       "description": "The BC Hydro integration ({title}) has not been able to get data for {hours} hours. It keeps retrying every hour, and this message disappears once an update succeeds.\n\nLast error: {error}\n\nIf this lasts more than a day, please report it with your logs at {issue_tracker}."
+    }
+  },
+  "selector": {
+    "update_mode": {
+      "options": {
+        "daily": "Once a day, when BC Hydro publishes (recommended)",
+        "interval": "At a fixed interval, around the clock"
+      }
+    },
+    "daily_retry_minutes": {
+      "options": {
+        "15": "Every 15 minutes",
+        "30": "Every 30 minutes",
+        "60": "Every hour (recommended)",
+        "120": "Every 2 hours",
+        "180": "Every 3 hours",
+        "0": "Not until tomorrow"
+      }
     }
   }
 }

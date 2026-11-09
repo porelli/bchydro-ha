@@ -45,15 +45,36 @@
   "options": {
     "step": {
       "init": {
-        "title": "BC Hydro 옵션",
-        "description": "BC Hydro 통합 옵션을 구성합니다.",
+        "title": "업데이트 일정",
+        "description": "통합이 BC Hydro에서 새 데이터를 어떻게 확인할까요? 다음 화면에서 선택한 일정의 설정을 지정합니다.",
         "data": {
-          "update_interval": "업데이트 간격 (분)",
+          "update_mode": "확인 시점",
           "historical_days": "과거 데이터 (일)"
         },
         "data_description": {
-          "update_interval": "BC Hydro에서 데이터를 가져오는 빈도 (30-1440분). 기본값: 60분.",
           "historical_days": "에너지 대시보드에 가져올 과거 데이터 일수. 기본값: 7일."
+        }
+      },
+      "daily": {
+        "title": "매일 확인",
+        "description": "BC Hydro는 사용량을 하루 한 번 게시합니다. 아래 시간부터 통합이 그날의 데이터를 찾고, 아직 없으면 아래 설정대로 도착할 때까지 다시 확인한 다음 다음 날까지 기다립니다.\n\n이 계정의 새 데이터 도착 시각(최근 30일): 보통 {arrival_typical}, 가장 이른 시각 {arrival_earliest}, 가장 늦은 시각 {arrival_latest}. {arrival_days}일 측정; 추가 {arrival_untimed_days}일은 확인 시 이미 데이터가 있었으며(보통 {arrival_ready_by} 이전), 그보다 일찍 도착합니다.",
+        "data": {
+          "daily_check_time": "확인 시작 시간",
+          "daily_retry_minutes": "데이터가 아직 없으면 다시 확인"
+        },
+        "data_description": {
+          "daily_check_time": "현지 시간. 평소 도착 시간 직후로 설정하면 대부분의 날에 한 번만 확인합니다.",
+          "daily_retry_minutes": "다시 확인하면 데이터를 더 빨리 받고, 최대 2시간 간격이면 도착 시각도 측정합니다. 확인할 때마다 BC Hydro에 로그인합니다."
+        }
+      },
+      "interval": {
+        "title": "고정 간격",
+        "description": "새 데이터가 예상되든 아니든 통합이 이 간격으로 하루 종일 BC Hydro를 확인합니다.",
+        "data": {
+          "update_interval": "확인 간격(분)"
+        },
+        "data_description": {
+          "update_interval": "30~1440분. 기본값: 60."
         }
       }
     }
@@ -89,6 +110,9 @@
       },
       "billing_percentage": {
         "name": "청구 기간 진행률"
+      },
+      "data_arrival_time": {
+        "name": "데이터 도착 시간"
       }
     }
   },
@@ -96,6 +120,24 @@
     "update_failing": {
       "title": "BC Hydro가 업데이트되지 않음",
       "description": "BC Hydro 통합({title})이 {hours}시간 동안 데이터를 가져오지 못했습니다. 매시간 다시 시도하며, 업데이트가 성공하면 이 메시지는 사라집니다.\n\n마지막 오류: {error}\n\n하루 이상 지속되면 로그와 함께 {issue_tracker} 에 신고해 주세요."
+    }
+  },
+  "selector": {
+    "update_mode": {
+      "options": {
+        "daily": "하루 한 번, BC Hydro가 게시할 때(권장)",
+        "interval": "고정 간격, 하루 종일"
+      }
+    },
+    "daily_retry_minutes": {
+      "options": {
+        "15": "15분마다",
+        "30": "30분마다",
+        "60": "매시간(권장)",
+        "120": "2시간마다",
+        "180": "3시간마다",
+        "0": "내일까지 안 함"
+      }
     }
   }
 }

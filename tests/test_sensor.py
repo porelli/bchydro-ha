@@ -169,7 +169,7 @@ async def test_async_setup_entry(
 
     # Should create all sensor entities
     entities = list(call_args[0])
-    assert len(entities) == 10  # Should create 10 sensors
+    assert len(entities) == 11  # 10 data sensors + data arrival time
 
     # Verify all entities are BCHydroSensor instances
     for entity in entities:

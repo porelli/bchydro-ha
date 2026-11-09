@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-09
+
+### Added
+- A daily update schedule, now the default. BC Hydro publishes usage once a
+  day, usually in the morning, so instead of polling around the clock the
+  integration checks from a configurable *daily check time* (8:00 by default),
+  checks again while that day's data is missing (every hour by default, from
+  every 15 minutes to every 3 hours, or not until the next day), then waits for
+  the next morning.
+  Most days that is one login instead of about twelve, which also makes BC
+  Hydro's bot protection less likely to turn the integration away.
+- A *Data arrival time* diagnostic sensor showing when data usually arrives for
+  your account (typical, earliest and latest time over the last 30 days). It is
+  most precise with checks at most two hours apart, as on the daily schedule's
+  retries or hourly polling. When the data is always already there at the check,
+  it shows when it was ready by (for example "≤08:00"), a sign the check time
+  can move earlier. The same summary appears in the options form.
+
+### Changed
+- Existing installations move to the daily schedule unless they had set an
+  update interval other than the 60-minute default; fixed-interval polling stays
+  available under the integration's options.
+- The 20-minute keepalive only runs with fixed-interval polling faster than two
+  hours, where it can still spare a login; on the daily schedule every check
+  signs in afresh anyway.
+
 ## [0.1.1] - 2026-11-08
 
 ### Fixed

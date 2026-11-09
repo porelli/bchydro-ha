@@ -20,6 +20,17 @@ GLOBAL_DATA_URL = f"{BASE_URL}/evportlet/web/global-data.html"
 CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 
+# Update schedule. "daily" checks from a time of day until that day's data
+# arrives; "interval" polls every update_interval minutes.
+CONF_UPDATE_MODE = "update_mode"
+CONF_DAILY_CHECK_TIME = "daily_check_time"
+# Minutes between checks while the day's data is missing; 0 = no retries
+CONF_DAILY_RETRY = "daily_retry_minutes"
+CONF_UPDATE_INTERVAL = "update_interval"
+UPDATE_MODE_DAILY = "daily"
+UPDATE_MODE_INTERVAL = "interval"
+DEFAULT_DAILY_CHECK_TIME = "08:00:00"
+
 # Update interval
 UPDATE_INTERVAL_MINUTES = 60
 
@@ -28,6 +39,8 @@ UPDATE_INTERVAL_MINUTES = 60
 # so the hourly refresh needs a fresh password login (each of which counts against
 # BC Hydro's bot scoring) only about every two hours instead of every hour.
 KEEPALIVE_INTERVAL_MINUTES = 20
+# Keepalives only help when refreshes are closer together than a login lasts
+KEEPALIVE_MAX_UPDATE_INTERVAL_MINUTES = 120
 
 # Limit concurrent updates to avoid overwhelming the API
 PARALLEL_UPDATES = 1
@@ -43,6 +56,7 @@ SENSOR_RATE_PLAN = "rate_plan"
 SENSOR_BILLING_PERIOD_START = "billing_period_start"
 SENSOR_DAYS_IN_BILLING_PERIOD = "days_in_billing_period"
 SENSOR_BILLING_PERCENTAGE = "billing_percentage"
+SENSOR_DATA_ARRIVAL_TIME = "data_arrival_time"
 
 # Attributes
 ATTR_ACCOUNT_ID = "account_id"

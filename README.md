@@ -117,7 +117,28 @@ Energy dashboard configuration.
 
 ## Data Update Frequency
 
-The integration updates data every 60 minutes by default. BC Hydro typically updates consumption data once per day.
+BC Hydro publishes usage data once a day, usually in the morning (Pacific time).
+By default the integration follows that **daily schedule**: from the *daily check
+time* (8:00 by default) it checks for that day's data, retries hourly until it
+shows up, then waits until the next morning. Most days that is a single check
+and a single login.
+
+You can change this under **Settings → Devices & services → BC Hydro → Configure**.
+The first screen asks *when to check*; the second shows only the settings for
+that choice:
+
+- **Once a day, when BC Hydro publishes** (default) - set the time to start
+  checking, and how often to check again while that day's data is missing
+  (every 15 minutes to 3 hours, default every hour, or not until tomorrow).
+  The screen shows when data has actually been arriving for your
+  account over the last 30 days (typical, earliest and latest), so you can set
+  the time just after it. The same figures are on the *Data arrival time*
+  diagnostic sensor.
+- **At a fixed interval, around the clock** - set how often to check (30-1440
+  minutes).
+
+Existing installations move to the daily schedule unless they had set an update
+interval other than the 60-minute default.
 
 ## Known Limitations
 
@@ -148,11 +169,12 @@ If you receive authentication errors:
 1. **Verify your credentials** - Make sure your username and password are correct
 2. **Check the logs** - Enable debug logging (see below) to see detailed error messages
 
-The integration logs in again on every update, so a single failed login (a network
-blip, a BC Hydro maintenance window, a CAPTCHA after too many attempts) is retried
-on the next update instead of breaking the integration. Reauthentication is only
-requested after several consecutive failures, which normally means the password
-really has changed.
+A failed login caused by BC Hydro itself (a network blip, a maintenance window,
+its bot protection turning automated logins away) is retried on the next check
+instead of breaking the integration. Reauthentication is only requested when BC
+Hydro rejects the password several times in a row. If data stops arriving for
+three hours or more, a notice appears under **Settings → System → Repairs** with
+the last error; it clears itself once an update succeeds.
 
 ### Reauthentication Required
 

@@ -11,6 +11,12 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    TimeSelector,
+)
 from homeassistant.util import slugify
 
 from .api import (
@@ -19,7 +25,18 @@ from .api import (
     BCHydroAuthError,
     BCHydroLoginBlockedError,
 )
-from .const import DOMAIN
+from .const import (
+    CONF_DAILY_CHECK_TIME,
+    CONF_DAILY_RETRY,
+    CONF_UPDATE_INTERVAL,
+    CONF_UPDATE_MODE,
+    DEFAULT_DAILY_CHECK_TIME,
+    DOMAIN,
+    UPDATE_MODE_DAILY,
+    UPDATE_MODE_INTERVAL,
+)
+from .coordinator import BCHydroDataUpdateCoordinator, resolve_update_mode
+from .schedule import DEFAULT_RETRY_MINUTES, RETRY_CHOICES_MINUTES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -362,51 +379,122 @@ class BCHydroOptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize options flow."""
         super().__init__()
         self._config_entry = config_entry
+        self._pending: dict[str, Any] = {}
 
     @property
     def config_entry(self) -> config_entries.ConfigEntry:
         """Return config entry."""
         return self._config_entry
 
+    def _arrival_placeholders(self) -> dict[str, str]:
+        """When data has been arriving for this account, if it is loaded."""
+        coordinator = getattr(self.config_entry, "runtime_data", None)
+        if isinstance(coordinator, BCHydroDataUpdateCoordinator):
+            return coordinator.arrival_placeholders()
+        return {
+            "arrival_typical": "—",
+            "arrival_earliest": "—",
+            "arrival_latest": "—",
+            "arrival_days": "0",
+            "arrival_untimed_days": "0",
+            "arrival_ready_by": "—",
+        }
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manage the options."""
+        """Step 1: how to schedule updates, and how much history to import."""
+        options = self.config_entry.options
         if user_input is not None:
-            return self.async_create_entry(
-                title="",
-                data={
-                    **user_input,
-                    # The choices are offered as strings (see below), store a number.
-                    "historical_days": int(user_input["historical_days"]),
-                },
-            )
+            self._pending = {
+                CONF_UPDATE_MODE: user_input[CONF_UPDATE_MODE],
+                # The choices are offered as strings (see below), store a number.
+                "historical_days": int(user_input["historical_days"]),
+            }
+            if user_input[CONF_UPDATE_MODE] == UPDATE_MODE_INTERVAL:
+                return await self.async_step_interval()
+            return await self.async_step_daily()
 
-        options_schema = vol.Schema(
+        schema = vol.Schema(
             {
-                vol.Optional(
-                    "update_interval",
-                    default=self.config_entry.options.get("update_interval", 60),
-                ): vol.All(vol.Coerce(int), vol.Range(min=30, max=1440)),
+                vol.Required(
+                    CONF_UPDATE_MODE, default=resolve_update_mode(dict(options))
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[UPDATE_MODE_DAILY, UPDATE_MODE_INTERVAL],
+                        translation_key=CONF_UPDATE_MODE,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
                 vol.Optional(
                     "historical_days",
                     # Offer the choices as strings: Home Assistant renders a select
                     # of numbers with nothing pre-selected, which reads as "no
                     # history configured" even though a default is in effect.
-                    default=str(self.config_entry.options.get("historical_days", 7)),
+                    default=str(options.get("historical_days", 7)),
                 ): vol.In([str(days) for days in HISTORICAL_DAYS_CHOICES]),
             }
         )
+        return self.async_show_form(step_id="init", data_schema=schema)
 
+    async def async_step_daily(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 2 (daily schedule): when to start checking each day."""
+        options = self.config_entry.options
+        if user_input is not None:
+            return self._save(
+                {
+                    CONF_DAILY_CHECK_TIME: user_input[CONF_DAILY_CHECK_TIME],
+                    # Offered as strings (a select), stored as minutes
+                    CONF_DAILY_RETRY: int(user_input[CONF_DAILY_RETRY]),
+                }
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_DAILY_CHECK_TIME,
+                    default=options.get(CONF_DAILY_CHECK_TIME, DEFAULT_DAILY_CHECK_TIME),
+                ): TimeSelector(),
+                vol.Required(
+                    CONF_DAILY_RETRY,
+                    default=str(options.get(CONF_DAILY_RETRY, DEFAULT_RETRY_MINUTES)),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[str(m) for m in RETRY_CHOICES_MINUTES],
+                        translation_key=CONF_DAILY_RETRY,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+            }
+        )
         return self.async_show_form(
-            step_id="init",
-            data_schema=options_schema,
-            description_placeholders={
-                "current_interval": str(
-                    self.config_entry.options.get("update_interval", 60)
-                ),
-                "current_historical_days": str(
-                    self.config_entry.options.get("historical_days", 7)
-                ),
-            },
+            step_id="daily",
+            data_schema=schema,
+            description_placeholders=self._arrival_placeholders(),
+        )
+
+    async def async_step_interval(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 2 (fixed interval): how often to poll."""
+        if user_input is not None:
+            return self._save({CONF_UPDATE_INTERVAL: user_input[CONF_UPDATE_INTERVAL]})
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_UPDATE_INTERVAL,
+                    default=self.config_entry.options.get(CONF_UPDATE_INTERVAL, 60),
+                ): vol.All(vol.Coerce(int), vol.Range(min=30, max=1440)),
+            }
+        )
+        return self.async_show_form(step_id="interval", data_schema=schema)
+
+    def _save(self, step_options: dict[str, Any]) -> ConfigFlowResult:
+        """Store the options, keeping the other schedule's setting for later."""
+        return self.async_create_entry(
+            title="",
+            data={**self.config_entry.options, **self._pending, **step_options},
         )

@@ -8,10 +8,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.storage import Store
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from .api import BCHydroApiClient, BCHydroApiError, BCHydroAuthError
 from .const import DOMAIN, KEEPALIVE_INTERVAL_MINUTES
-from .coordinator import BCHydroDataUpdateCoordinator
+from .coordinator import (
+    ARRIVALS_STORAGE_VERSION,
+    BCHydroDataUpdateCoordinator,
+    arrivals_storage_key,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,6 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> b
         )
 
         coordinator = BCHydroDataUpdateCoordinator(hass, client, entry)
+        await coordinator.async_load_arrivals()
         await coordinator.async_config_entry_first_refresh()
 
         if not account_id:
@@ -76,16 +82,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
-    async def _keep_alive(_now: datetime) -> None:
-        await client.keep_alive()
+    if coordinator.wants_keepalive:
+        # Only when refreshes come faster than a login expires; on the daily
+        # schedule every check signs in afresh anyway.
+        async def _keep_alive(_now: datetime) -> None:
+            await client.keep_alive()
 
-    entry.async_on_unload(
-        async_track_time_interval(
-            hass,
-            _keep_alive,
-            timedelta(minutes=KEEPALIVE_INTERVAL_MINUTES),
+        entry.async_on_unload(
+            async_track_time_interval(
+                hass,
+                _keep_alive,
+                timedelta(minutes=KEEPALIVE_INTERVAL_MINUTES),
+            )
         )
-    )
 
     _LOGGER.info("Successfully set up BC Hydro integration for %s", username)
     return True
@@ -106,3 +115,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> 
 async def async_reload_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> None:
     """Reload config entry when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: BCHydroConfigEntry) -> None:
+    """Delete the arrival history kept for a removed entry."""
+    await Store(hass, ARRIVALS_STORAGE_VERSION, arrivals_storage_key(entry.entry_id)).async_remove()

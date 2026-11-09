@@ -264,10 +264,23 @@ async def test_keepalive_network_error_keeps_session() -> None:
     assert client._authenticated is True
 
 
+@pytest.fixture
+def interval_config_entry(mock_config_entry_data):
+    """An entry polling every hour, where keepalives are worthwhile."""
+    from tests.conftest import create_config_entry
+
+    return create_config_entry(
+        title="BC Hydro (test@example.com)",
+        data=mock_config_entry_data,
+        options={"update_mode": "interval", "update_interval": 60},
+    )
+
+
 async def test_setup_schedules_keepalive(
-    hass: HomeAssistant, mock_config_entry, mock_account_profile_data
+    hass: HomeAssistant, interval_config_entry, mock_account_profile_data
 ) -> None:
-    """The integration pings BC Hydro between hourly refreshes."""
+    """Hourly polling pings BC Hydro between refreshes."""
+    mock_config_entry = interval_config_entry
     from datetime import timedelta
 
     from homeassistant.util import dt as dt_util
@@ -349,3 +362,32 @@ async def test_relogin_starts_from_a_fresh_cookie_jar() -> None:
     sessions[0].close.assert_awaited_once()
     assert jars[1] is not jars[0]
     assert [cookie.key for cookie in jars[1] if cookie.key == "iPlanetDirectoryPro"] == []
+
+
+async def test_daily_schedule_has_no_keepalive(
+    hass: HomeAssistant, mock_config_entry, mock_account_profile_data
+) -> None:
+    """Daily checks sign in afresh anyway, so no keepalive runs between them."""
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+    from pytest_homeassistant_custom_component.common import async_fire_time_changed
+
+    with patch("custom_components.bchydro.BCHydroApiClient") as mock_api_class, patch(
+        "custom_components.bchydro.coordinator.BCHydroDataUpdateCoordinator.async_config_entry_first_refresh",
+        new_callable=AsyncMock,
+    ), patch(
+        "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
+        new_callable=AsyncMock,
+    ):
+        client = AsyncMock()
+        client.get_cookies = MagicMock(return_value={})
+        mock_api_class.return_value = client
+
+        await hass.config_entries.async_add(mock_config_entry)
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=45))
+        await hass.async_block_till_done()
+
+        client.keep_alive.assert_not_called()
+        await hass.config_entries.async_unload(mock_config_entry.entry_id)

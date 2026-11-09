@@ -45,15 +45,36 @@
   "options": {
     "step": {
       "init": {
-        "title": "BC Hydro-opties",
-        "description": "Configureer BC Hydro-integratieopties.",
+        "title": "Updateschema",
+        "description": "Hoe moet de integratie bij BC Hydro naar nieuwe gegevens zoeken? Het volgende scherm bevat de instellingen voor het gekozen schema.",
         "data": {
-          "update_interval": "Update-interval (minuten)",
+          "update_mode": "Wanneer controleren",
           "historical_days": "Historische gegevens (dagen)"
         },
         "data_description": {
-          "update_interval": "Hoe vaak gegevens van BC Hydro worden opgehaald (30-1440 minuten). Standaard: 60 minuten.",
           "historical_days": "Hoeveel dagen historische gegevens te importeren voor het Energie Dashboard. Standaard: 7 dagen."
+        }
+      },
+      "daily": {
+        "title": "Dagelijkse controle",
+        "description": "BC Hydro publiceert het verbruik één keer per dag. Vanaf de tijd hieronder zoekt de integratie naar de gegevens van die dag; zijn ze er nog niet, dan controleert ze opnieuw zoals hieronder ingesteld tot ze binnen zijn en wacht dan tot de volgende dag.\n\nWanneer nieuwe gegevens voor dit account binnenkwamen (laatste 30 dagen): meestal {arrival_typical}, vroegst {arrival_earliest}, laatst {arrival_latest}. Gemeten op {arrival_days} dagen; op {arrival_untimed_days} andere waren de gegevens er al bij de controle, meestal vóór {arrival_ready_by}, dus ze komen eerder binnen.",
+        "data": {
+          "daily_check_time": "Beginnen met controleren om",
+          "daily_retry_minutes": "Als de gegevens er nog niet zijn, opnieuw controleren"
+        },
+        "data_description": {
+          "daily_check_time": "Lokale tijd. Net na uw gebruikelijke aankomsttijd volstaat op de meeste dagen één controle.",
+          "daily_retry_minutes": "Opnieuw controleren levert de gegevens eerder en meet, bij hooguit 2 uur ertussen, wanneer ze binnenkomen. Elke controle is een aanmelding bij BC Hydro."
+        }
+      },
+      "interval": {
+        "title": "Vast interval",
+        "description": "De integratie vraagt BC Hydro de klok rond met dit interval, of er nu nieuwe gegevens verwacht worden of niet.",
+        "data": {
+          "update_interval": "Controleren elke (minuten)"
+        },
+        "data_description": {
+          "update_interval": "30 tot 1440 minuten. Standaard: 60."
         }
       }
     }
@@ -89,6 +110,9 @@
       },
       "billing_percentage": {
         "name": "Voortgang factureringsperiode"
+      },
+      "data_arrival_time": {
+        "name": "Aankomsttijd gegevens"
       }
     }
   },
@@ -96,6 +120,24 @@
     "update_failing": {
       "title": "BC Hydro wordt niet bijgewerkt",
       "description": "De BC Hydro-integratie ({title}) kan al {hours} uur geen gegevens ophalen. Ze blijft elk uur opnieuw proberen en dit bericht verdwijnt zodra een update slaagt.\n\nLaatste fout: {error}\n\nAls dit langer dan een dag duurt, meld het dan met uw logboeken op {issue_tracker}."
+    }
+  },
+  "selector": {
+    "update_mode": {
+      "options": {
+        "daily": "Eén keer per dag, wanneer BC Hydro publiceert (aanbevolen)",
+        "interval": "Met een vast interval, de klok rond"
+      }
+    },
+    "daily_retry_minutes": {
+      "options": {
+        "15": "Elke 15 minuten",
+        "30": "Elke 30 minuten",
+        "60": "Elk uur (aanbevolen)",
+        "120": "Elke 2 uur",
+        "180": "Elke 3 uur",
+        "0": "Pas morgen"
+      }
     }
   }
 }

@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
     UpdateFailed,
@@ -16,7 +17,27 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.util import dt as dt_util
 
 from .api import BCHydroApiClient, BCHydroApiError, BCHydroAuthError
-from .const import DOMAIN, UPDATE_INTERVAL_MINUTES
+from .const import (
+    CONF_DAILY_CHECK_TIME,
+    CONF_DAILY_RETRY,
+    CONF_UPDATE_INTERVAL,
+    CONF_UPDATE_MODE,
+    DEFAULT_DAILY_CHECK_TIME,
+    DOMAIN,
+    KEEPALIVE_MAX_UPDATE_INTERVAL_MINUTES,
+    UPDATE_INTERVAL_MINUTES,
+    UPDATE_MODE_DAILY,
+    UPDATE_MODE_INTERVAL,
+)
+from .schedule import (
+    ArrivalTracker,
+    has_latest_batch,
+    newest_actual_reading,
+    next_daily_check,
+    parse_check_time,
+    parse_retry,
+    summarize,
+)
 from .statistics import (
     account_statistics,
     async_import_statistics,
@@ -24,6 +45,29 @@ from .statistics import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+ARRIVALS_STORAGE_VERSION = 1
+
+
+def arrivals_storage_key(entry_id: str) -> str:
+    """Storage key of the arrival history of one config entry."""
+    return f"{DOMAIN}.arrivals.{entry_id}"
+
+
+def resolve_update_mode(options: dict[str, Any]) -> str:
+    """The configured schedule; entries from before it existed get one picked.
+
+    Someone who chose a non-default polling interval keeps polling at it;
+    everyone else moves to the daily schedule.
+    """
+    mode = options.get(CONF_UPDATE_MODE)
+    if mode in (UPDATE_MODE_DAILY, UPDATE_MODE_INTERVAL):
+        return str(mode)
+    interval = options.get(CONF_UPDATE_INTERVAL, UPDATE_INTERVAL_MINUTES)
+    if interval != UPDATE_INTERVAL_MINUTES:
+        return UPDATE_MODE_INTERVAL
+    return UPDATE_MODE_DAILY
+
 
 # Passed as a placeholder: hassfest does not allow URLs inside translations
 ISSUE_TRACKER_URL = "https://github.com/porelli/bchydro-ha/issues"
@@ -58,8 +102,17 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
     ) -> None:
         """Initialize the coordinator."""
         update_interval_minutes = entry.options.get(
-            "update_interval", UPDATE_INTERVAL_MINUTES
+            CONF_UPDATE_INTERVAL, UPDATE_INTERVAL_MINUTES
         )
+        self.update_mode = resolve_update_mode(dict(entry.options))
+        self.interval_minutes = int(update_interval_minutes)
+        self.daily_check_time = parse_check_time(
+            entry.options.get(CONF_DAILY_CHECK_TIME, DEFAULT_DAILY_CHECK_TIME)
+        )
+        self.daily_retry = parse_retry(entry.options.get(CONF_DAILY_RETRY))
+        if self.update_mode == UPDATE_MODE_DAILY:
+            # Replaced after every refresh by the next check of the schedule
+            update_interval_minutes = 60
 
         super().__init__(
             hass,
@@ -72,6 +125,11 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
         self._historical_fetched = False  # Track if we've fetched historical data
         self.consecutive_auth_failures = 0
         self.failing_since: datetime | None = None
+        self.next_check: datetime | None = None
+        self.arrivals = ArrivalTracker()
+        self._arrivals_store: Store[dict[str, Any]] = Store(
+            hass, ARRIVALS_STORAGE_VERSION, arrivals_storage_key(entry.entry_id)
+        )
         # Each configured account keeps its statistics separate; the first one
         # configured keeps the original ids (see statistics.account_statistics).
         self.statistics = account_statistics(
@@ -142,6 +200,68 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
         return daily_consumption
 
     @property
+    def wants_keepalive(self) -> bool:
+        """Keepalives help only when refreshes come faster than a login expires."""
+        return (
+            self.update_mode == UPDATE_MODE_INTERVAL
+            and self.interval_minutes < KEEPALIVE_MAX_UPDATE_INTERVAL_MINUTES
+        )
+
+    async def async_load_arrivals(self) -> None:
+        """Restore the arrival history recorded before a restart."""
+        self.arrivals.load(await self._arrivals_store.async_load())
+
+    def _plan_next_check(self, now: datetime, have_batch: bool) -> None:
+        """Point the coordinator at the next check of the daily schedule."""
+        if self.update_mode != UPDATE_MODE_DAILY:
+            self.next_check = None
+            return
+        self.next_check = next_daily_check(
+            now, self.daily_check_time, have_batch, self.daily_retry
+        )
+        self.update_interval = max(self.next_check - now, timedelta(minutes=1))
+        _LOGGER.debug(
+            "Next BC Hydro check at %s (latest data %s)",
+            self.next_check.isoformat(),
+            "in" if have_batch else "not in yet",
+        )
+
+    def _track_arrival(self, data: dict[str, Any]) -> None:
+        """Record when new data shows up and plan the next check."""
+        now = dt_util.now()
+        newest = newest_actual_reading(
+            (data.get("consumption") or {}).get("hourly_consumption")
+        )
+        self.arrivals.observe(now, newest)
+        self._arrivals_store.async_delay_save(self.arrivals.as_dict, 10)
+        self._plan_next_check(now, has_latest_batch(newest, now))
+        summary = summarize(self.arrivals.arrivals, now.tzinfo)
+        data["arrival"] = {
+            "state": summary.state,
+            "typical": summary.typical,
+            **summary.as_attributes(),
+            "update_schedule": self.update_mode,
+            "daily_check_time": self.daily_check_time.strftime("%H:%M"),
+            "daily_retry_minutes": (
+                int(self.daily_retry.total_seconds() // 60) if self.daily_retry else 0
+            ),
+            "next_check": self.next_check.isoformat() if self.next_check else None,
+            "newest_reading": newest.isoformat() if newest else None,
+        }
+
+    def arrival_placeholders(self) -> dict[str, str]:
+        """When data usually arrives, as placeholders for the options form."""
+        summary = summarize(self.arrivals.arrivals, dt_util.now().tzinfo)
+        return {
+            "arrival_typical": summary.typical or "—",
+            "arrival_earliest": summary.earliest or "—",
+            "arrival_latest": summary.latest or "—",
+            "arrival_days": str(summary.timed_days),
+            "arrival_untimed_days": str(summary.untimed_days),
+            "arrival_ready_by": summary.ready_by or "—",
+        }
+
+    @property
     def repair_issue_id(self) -> str:
         """Id of the repair issue reporting that this entry stopped updating."""
         return f"update_failing_{self.config_entry.entry_id}"
@@ -152,8 +272,10 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
             data = await self._fetch_data()
         except UpdateFailed as err:
             self._record_failure(err)
+            self._plan_next_check(dt_util.now(), have_batch=False)
             raise
         self._record_success()
+        self._track_arrival(data)
         return data
 
     def _record_failure(self, err: Exception) -> None:

@@ -45,15 +45,36 @@
   "options": {
     "step": {
       "init": {
-        "title": "Mga Opsyon ng BC Hydro",
-        "description": "I-configure ang mga opsyon ng integrasyon ng BC Hydro.",
+        "title": "Iskedyul ng pag-update",
+        "description": "Paano susuriin ng integration ang BC Hydro para sa bagong data? Nasa susunod na screen ang mga setting ng iskedyul na pipiliin mo.",
         "data": {
-          "update_interval": "Pagitan ng pag-update (minuto)",
+          "update_mode": "Kailan susuriin",
           "historical_days": "Makasaysayang datos (araw)"
         },
         "data_description": {
-          "update_interval": "Gaano kadalas kumuha ng datos mula sa BC Hydro (30-1440 minuto). Default: 60 minuto.",
           "historical_days": "Ilang araw ng makasaysayang datos ang i-import para sa Energy Dashboard. Default: 7 araw."
+        }
+      },
+      "daily": {
+        "title": "Araw-araw na pagsusuri",
+        "description": "Inilalabas ng BC Hydro ang konsumo minsan sa isang araw. Mula sa oras sa ibaba, hahanapin ng integration ang data ng araw na iyon; kung wala pa, susuriin ulit ayon sa setting sa ibaba hanggang dumating ito, saka maghihintay hanggang sa susunod na araw.\n\nKailan dumating ang bagong data ng account na ito (huling 30 araw): karaniwan {arrival_typical}, pinakamaaga {arrival_earliest}, pinakahuli {arrival_latest}. Nasukat sa {arrival_days} araw; sa {arrival_untimed_days} pang araw naroon na ang data nang suriin, karaniwang bago mag-{arrival_ready_by}, kaya mas maaga itong dumarating.",
+        "data": {
+          "daily_check_time": "Simulang suriin sa",
+          "daily_retry_minutes": "Kung wala pa ang data, suriin ulit"
+        },
+        "data_description": {
+          "daily_check_time": "Lokal na oras. Kung kasunod lang ng karaniwang oras ng pagdating, isang pagsusuri lang ang kailangan sa karamihan ng araw.",
+          "daily_retry_minutes": "Mas maagang nakukuha ang data sa muling pagsusuri at, kung hanggang 2 oras ang pagitan, nasusukat kung kailan ito dumarating. Bawat pagsusuri ay isang pag-login sa BC Hydro."
+        }
+      },
+      "interval": {
+        "title": "Nakapirming agwat",
+        "description": "Susuriin ng integration ang BC Hydro buong araw sa agwat na ito, may inaasahang bagong data man o wala.",
+        "data": {
+          "update_interval": "Suriin tuwing (minuto)"
+        },
+        "data_description": {
+          "update_interval": "30 hanggang 1440 minuto. Default: 60."
         }
       }
     }
@@ -89,6 +110,9 @@
       },
       "billing_percentage": {
         "name": "Progreso ng panahon ng pagsingil"
+      },
+      "data_arrival_time": {
+        "name": "Oras ng pagdating ng data"
       }
     }
   },
@@ -96,6 +120,24 @@
     "update_failing": {
       "title": "Hindi nag-a-update ang BC Hydro",
       "description": "Hindi nakakuha ng data ang BC Hydro integration ({title}) sa loob ng {hours} oras. Patuloy itong sumusubok bawat oras, at mawawala ang mensaheng ito kapag nagtagumpay ang isang update.\n\nHuling error: {error}\n\nKung tumagal ito nang higit sa isang araw, pakiulat ito kasama ang iyong mga log sa {issue_tracker}."
+    }
+  },
+  "selector": {
+    "update_mode": {
+      "options": {
+        "daily": "Minsan sa isang araw, kapag naglabas ang BC Hydro (inirerekomenda)",
+        "interval": "Sa nakapirming agwat, buong araw"
+      }
+    },
+    "daily_retry_minutes": {
+      "options": {
+        "15": "Bawat 15 minuto",
+        "30": "Bawat 30 minuto",
+        "60": "Bawat oras (inirerekomenda)",
+        "120": "Bawat 2 oras",
+        "180": "Bawat 3 oras",
+        "0": "Hindi hanggang bukas"
+      }
     }
   }
 }

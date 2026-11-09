@@ -45,15 +45,36 @@
   "options": {
     "step": {
       "init": {
-        "title": "BC Hydro 选项",
-        "description": "配置 BC Hydro 集成选项。",
+        "title": "更新计划",
+        "description": "集成应如何检查 BC Hydro 的新数据？下一页是所选计划的设置。",
         "data": {
-          "update_interval": "更新间隔（分钟）",
+          "update_mode": "检查时机",
           "historical_days": "历史数据（天）"
         },
         "data_description": {
-          "update_interval": "从 BC Hydro 获取数据的频率（30-1440 分钟）。默认：60 分钟。",
           "historical_days": "为能源仪表板导入多少天的历史数据。默认：7 天。"
+        }
+      },
+      "daily": {
+        "title": "每日检查",
+        "description": "BC Hydro 每天发布一次用电数据。从下方时间开始，集成会查找当天的数据；如果尚未发布，会按下方设置再次检查，直到数据到达，然后等到第二天。\n\n此账户新数据的到达时间（最近 30 天）：通常 {arrival_typical}，最早 {arrival_earliest}，最晚 {arrival_latest}。已测量 {arrival_days} 天；另有 {arrival_untimed_days} 天在检查时数据已存在，通常在 {arrival_ready_by} 之前，说明数据到得更早。",
+        "data": {
+          "daily_check_time": "开始检查时间",
+          "daily_retry_minutes": "如果数据尚未到达，再次检查"
+        },
+        "data_description": {
+          "daily_check_time": "本地时间。设在通常到达时间之后，大多数日子只需检查一次。",
+          "daily_retry_minutes": "重试能更早获得数据，间隔不超过 2 小时时还能测出到达时间。每次检查都会登录一次 BC Hydro。"
+        }
+      },
+      "interval": {
+        "title": "固定间隔",
+        "description": "无论是否会有新数据，集成都会按此间隔全天检查 BC Hydro。",
+        "data": {
+          "update_interval": "检查间隔（分钟）"
+        },
+        "data_description": {
+          "update_interval": "30 到 1440 分钟。默认：60。"
         }
       }
     }
@@ -89,6 +110,9 @@
       },
       "billing_percentage": {
         "name": "账单周期进度"
+      },
+      "data_arrival_time": {
+        "name": "数据到达时间"
       }
     }
   },
@@ -96,6 +120,24 @@
     "update_failing": {
       "title": "BC Hydro 未在更新",
       "description": "BC Hydro 集成（{title}）已有 {hours} 小时无法获取数据。它会每小时重试一次，更新成功后此消息会自动消失。\n\n最近的错误：{error}\n\n如果持续超过一天，请附上日志在 {issue_tracker} 报告。"
+    }
+  },
+  "selector": {
+    "update_mode": {
+      "options": {
+        "daily": "每天一次，在 BC Hydro 发布时（推荐）",
+        "interval": "按固定间隔，全天检查"
+      }
+    },
+    "daily_retry_minutes": {
+      "options": {
+        "15": "每 15 分钟",
+        "30": "每 30 分钟",
+        "60": "每小时（推荐）",
+        "120": "每 2 小时",
+        "180": "每 3 小时",
+        "0": "明天再查"
+      }
     }
   }
 }

@@ -45,15 +45,36 @@
   "options": {
     "step": {
       "init": {
-        "title": "BC Hydro-Optionen",
-        "description": "BC Hydro-Integrationsoptionen konfigurieren.",
+        "title": "Aktualisierungsplan",
+        "description": "Wie soll die Integration bei BC Hydro nach neuen Daten suchen? Auf der nächsten Seite folgen die Einstellungen für den gewählten Plan.",
         "data": {
-          "update_interval": "Aktualisierungsintervall (Minuten)",
+          "update_mode": "Wann prüfen",
           "historical_days": "Historische Daten (Tage)"
         },
         "data_description": {
-          "update_interval": "Wie oft Daten von BC Hydro abgerufen werden (30-1440 Minuten). Standard: 60 Minuten.",
           "historical_days": "Wie viele Tage historischer Daten für das Energie-Dashboard importiert werden sollen. Standard: 7 Tage."
+        }
+      },
+      "daily": {
+        "title": "Tägliche Prüfung",
+        "description": "BC Hydro veröffentlicht den Verbrauch einmal täglich. Ab der unten gewählten Zeit sucht die Integration nach den Daten des Tages; sind sie noch nicht da, prüft sie wie unten eingestellt erneut, bis sie eintreffen, und wartet dann bis zum nächsten Tag.\n\nWann neue Daten für dieses Konto eingetroffen sind (letzte 30 Tage): typisch {arrival_typical}, frühestens {arrival_earliest}, spätestens {arrival_latest}. Gemessen an {arrival_days} Tagen; an {arrival_untimed_days} weiteren waren die Daten bei der Prüfung schon da, meist bis {arrival_ready_by} – sie kommen also früher.",
+        "data": {
+          "daily_check_time": "Prüfen ab",
+          "daily_retry_minutes": "Wenn die Daten noch fehlen, erneut prüfen"
+        },
+        "data_description": {
+          "daily_check_time": "Ortszeit. Kurz nach Ihrer üblichen Ankunftszeit genügt an den meisten Tagen eine einzige Prüfung.",
+          "daily_retry_minutes": "Wiederholungen liefern die Daten früher und messen bei höchstens 2 Stunden Abstand, wann sie eintreffen. Jede Prüfung ist eine Anmeldung bei BC Hydro."
+        }
+      },
+      "interval": {
+        "title": "Festes Intervall",
+        "description": "Die Integration fragt BC Hydro rund um die Uhr in diesem Intervall ab, ob neue Daten zu erwarten sind oder nicht.",
+        "data": {
+          "update_interval": "Prüfen alle (Minuten)"
+        },
+        "data_description": {
+          "update_interval": "30 bis 1440 Minuten. Standard: 60."
         }
       }
     }
@@ -89,6 +110,9 @@
       },
       "billing_percentage": {
         "name": "Abrechnungszeitraum Fortschritt"
+      },
+      "data_arrival_time": {
+        "name": "Datenankunftszeit"
       }
     }
   },
@@ -96,6 +120,24 @@
     "update_failing": {
       "title": "BC Hydro aktualisiert nicht",
       "description": "Die BC Hydro-Integration ({title}) konnte seit {hours} Stunden keine Daten abrufen. Sie versucht es stündlich erneut, und diese Meldung verschwindet, sobald eine Aktualisierung gelingt.\n\nLetzter Fehler: {error}\n\nWenn dies länger als einen Tag anhält, melden Sie es bitte mit Ihren Protokollen unter {issue_tracker}."
+    }
+  },
+  "selector": {
+    "update_mode": {
+      "options": {
+        "daily": "Einmal täglich, wenn BC Hydro veröffentlicht (empfohlen)",
+        "interval": "In festem Intervall, rund um die Uhr"
+      }
+    },
+    "daily_retry_minutes": {
+      "options": {
+        "15": "Alle 15 Minuten",
+        "30": "Alle 30 Minuten",
+        "60": "Stündlich (empfohlen)",
+        "120": "Alle 2 Stunden",
+        "180": "Alle 3 Stunden",
+        "0": "Erst morgen"
+      }
     }
   }
 }
