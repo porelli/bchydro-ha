@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "Этот аккаунт уже настроен",
       "reauth_successful": "Повторная аутентификация успешна",
-      "all_accounts_configured": "Все аккаунты этой учётной записи BC Hydro уже настроены"
+      "all_accounts_configured": "Все аккаунты этой учётной записи BC Hydro уже настроены",
+      "reauth_entry_missing": "Эта запись BC Hydro больше не существует, повторная аутентификация не нужна."
     }
   },
   "options": {

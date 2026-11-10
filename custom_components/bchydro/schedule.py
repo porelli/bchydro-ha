@@ -94,9 +94,7 @@ def parse_retry(value: Any) -> timedelta | None:
 
 
 def parse_check_time(value: Any, default: time = DEFAULT_CHECK_TIME) -> time:
-    """Read the configured check time ("HH:MM" or "HH:MM:SS")."""
-    if isinstance(value, time):
-        return value
+    """Read the configured check time ("HH:MM" or "HH:MM:SS", as options store it)."""
     try:
         return time.fromisoformat(str(value))
     except ValueError:

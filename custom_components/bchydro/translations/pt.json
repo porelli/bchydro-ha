@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "Esta conta já está configurada",
       "reauth_successful": "Reautenticação bem-sucedida",
-      "all_accounts_configured": "Todas as contas deste login da BC Hydro já estão configuradas"
+      "all_accounts_configured": "Todas as contas deste login da BC Hydro já estão configuradas",
+      "reauth_entry_missing": "Esta entrada da BC Hydro não existe mais, então não há nada para autenticar novamente."
     }
   },
   "options": {

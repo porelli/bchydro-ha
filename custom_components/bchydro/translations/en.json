@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "This account is already configured",
       "reauth_successful": "Re-authentication successful",
-      "all_accounts_configured": "Every account of this BC Hydro login is already set up"
+      "all_accounts_configured": "Every account of this BC Hydro login is already set up",
+      "reauth_entry_missing": "This BC Hydro entry no longer exists, so there is nothing to re-authenticate."
     }
   },
   "options": {

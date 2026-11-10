@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "این حساب قبلاً پیکربندی شده است",
       "reauth_successful": "احراز هویت مجدد موفق بود",
-      "all_accounts_configured": "همه حساب‌های این ورود BC Hydro قبلاً تنظیم شده‌اند"
+      "all_accounts_configured": "همه حساب‌های این ورود BC Hydro قبلاً تنظیم شده‌اند",
+      "reauth_entry_missing": "این ورودی BC Hydro دیگر وجود ندارد، بنابراین چیزی برای احراز هویت مجدد نیست."
     }
   },
   "options": {

@@ -208,6 +208,19 @@ logger:
 
 3. Open an issue on GitHub with the relevant log entries
 
+## Development
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pytest --cov=custom_components/bchydro
+git config core.hooksPath .githooks   # run the tests before every push
+```
+
+The test suite covers every line and branch of the integration, and keeps it
+that way: a run measuring less than 100% fails, in CI and in the pre-push hook
+(`.coveragerc`). Cover new code with a test, or remove it if it cannot be
+reached.
+
 ## Privacy & Security
 
 - Your BC Hydro credentials are stored securely in Home Assistant's credential storage

@@ -72,10 +72,8 @@ def _login_page_message(page_html: str) -> str:
     "alert"/"warning" banners (a scam notice, outages) that say nothing about
     this login.
     """
-    try:
-        soup = BeautifulSoup(page_html, "html.parser")
-    except Exception:  # noqa: BLE001 - best effort, only used for diagnostics
-        return ""
+    # html.parser accepts any text, so this cannot fail
+    soup = BeautifulSoup(page_html, "html.parser")
     messages: list[str] = []
     for element in soup.find_all(["div", "p", "span", "label", "li"]):
         attributes = " ".join(
@@ -193,25 +191,25 @@ class BCHydroApiClient:
         current_time = time.time()
 
         # Global rate limiting (across all instances)
-        # Reset window if it's been more than 60 seconds
-        if current_time - _global_window_start > _GLOBAL_WINDOW_SECONDS:
+        # Start a new window once the current one is over
+        if current_time - _global_window_start >= _GLOBAL_WINDOW_SECONDS:
             _global_window_start = current_time
             _global_auth_attempts_in_window = 0
 
         # Check global rate limit
         if _global_auth_attempts_in_window >= _GLOBAL_MAX_ATTEMPTS_PER_WINDOW:
+            # The window is still open (it was not reset above), so this is > 0
             wait_time = _GLOBAL_WINDOW_SECONDS - (current_time - _global_window_start)
-            if wait_time > 0:
-                _LOGGER.warning(
-                    "Global rate limit reached (%d attempts in %.0fs). "
-                    "Waiting %.1fs before next attempt.",
-                    _global_auth_attempts_in_window,
-                    _GLOBAL_WINDOW_SECONDS,
-                    wait_time,
-                )
-                raise BCHydroConnectionError(
-                    f"Too many authentication attempts. Please wait {int(wait_time)} seconds."
-                )
+            _LOGGER.warning(
+                "Global rate limit reached (%d attempts in %.0fs). "
+                "Waiting %.1fs before next attempt.",
+                _global_auth_attempts_in_window,
+                _GLOBAL_WINDOW_SECONDS,
+                wait_time,
+            )
+            raise BCHydroConnectionError(
+                f"Too many authentication attempts. Please wait {int(wait_time)} seconds."
+            )
 
         # Enforce minimum interval between attempts (global)
         time_since_last = current_time - _global_last_auth_attempt
@@ -695,7 +693,7 @@ class BCHydroApiClient:
         self._deduplicate_cookies()
         return self._parse_consumption_xml(xml_text, granularity)
 
-    def _reset_usage_session(self) -> None:
+    def _reset_usage_session(self, session: ClientSession) -> None:
         """Forget the usage service's own session, keeping the login.
 
         The usage service (/evportlet) opens a session on the first consumption
@@ -703,9 +701,6 @@ class BCHydroApiClient:
         its cookies it opens a new one from the still-valid login cookies, which
         is what a browser gets by reloading the usage page.
         """
-        session = self._provided_session if self._provided_session else self._session
-        if session is None:
-            return
         jar = session.cookie_jar
         if isinstance(jar, aiohttp.CookieJar):
             jar.clear(lambda morsel: (morsel["path"] or "").startswith("/evportlet"))
@@ -726,7 +721,7 @@ class BCHydroApiClient:
         if not session:
             raise BCHydroApiError("Session not initialized - please authenticate first")
 
-        self._reset_usage_session()
+        self._reset_usage_session(session)
 
         post_data = {
             "DateRange": date_range,

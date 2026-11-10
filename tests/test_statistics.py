@@ -628,3 +628,22 @@ def test_account_statistics_separates_further_accounts() -> None:
     # The label makes the account recognisable in the statistics list
     assert "42 - 456 SAMPLE AVE" in energy_meta["name"]
     assert cost_meta["statistic_id"] == cabin.cost_id
+
+
+async def test_first_import_with_only_unvalidated_hours_writes_nothing(
+    hass: HomeAssistant,
+    mock_recorder,
+    mock_add_statistics,
+) -> None:
+    """A brand-new entry whose window holds only INVALID hours imports nothing yet."""
+    mock_recorder.async_add_executor_job.return_value = {}
+    mock_api_client = AsyncMock()
+    mock_api_client.get_consumption_data.return_value = {
+        "hourly_consumption": [
+            {"date_time": "2025-12-25T10:00:00-08:00", "value": 0.0, "cost": 0.0, "quality": "INVALID"},
+        ]
+    }
+
+    await async_import_statistics(hass, mock_api_client, historical_days=7)
+
+    mock_add_statistics.assert_not_called()

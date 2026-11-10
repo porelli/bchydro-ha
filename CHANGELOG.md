@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Re-authenticating an entry that was removed in the meantime now stops with a
+  message; it used to accept the password and show the same form again.
+
+### Changed
+- The test suite covers every line and branch of the integration, and CI plus
+  a pre-push hook fail any change that lowers coverage below 100%. Unreachable
+  code found along the way was removed.
+
 ## [0.2.1] - 2026-11-09
 
 ### Fixed

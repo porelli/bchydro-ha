@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "Tài khoản này đã được cấu hình",
       "reauth_successful": "Xác thực lại thành công",
-      "all_accounts_configured": "Tất cả tài khoản của thông tin đăng nhập BC Hydro này đã được thiết lập"
+      "all_accounts_configured": "Tất cả tài khoản của thông tin đăng nhập BC Hydro này đã được thiết lập",
+      "reauth_entry_missing": "Mục BC Hydro này không còn tồn tại nên không có gì để xác thực lại."
     }
   },
   "options": {

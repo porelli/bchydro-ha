@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "Dit account is al geconfigureerd",
       "reauth_successful": "Herauthenticatie geslaagd",
-      "all_accounts_configured": "Alle accounts van deze BC Hydro-login zijn al ingesteld"
+      "all_accounts_configured": "Alle accounts van deze BC Hydro-login zijn al ingesteld",
+      "reauth_entry_missing": "Deze BC Hydro-vermelding bestaat niet meer, dus er valt niets opnieuw te verifiëren."
     }
   },
   "options": {

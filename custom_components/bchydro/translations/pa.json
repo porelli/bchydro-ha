@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "ਇਹ ਖਾਤਾ ਪਹਿਲਾਂ ਹੀ ਸੈੱਟਅੱਪ ਹੈ",
       "reauth_successful": "ਮੁੜ-ਪ੍ਰਮਾਣਿਕਤਾ ਸਫਲ",
-      "all_accounts_configured": "ਇਸ BC Hydro ਲੌਗਇਨ ਦੇ ਸਾਰੇ ਖਾਤੇ ਪਹਿਲਾਂ ਹੀ ਸੈੱਟਅੱਪ ਹੋ ਚੁੱਕੇ ਹਨ"
+      "all_accounts_configured": "ਇਸ BC Hydro ਲੌਗਇਨ ਦੇ ਸਾਰੇ ਖਾਤੇ ਪਹਿਲਾਂ ਹੀ ਸੈੱਟਅੱਪ ਹੋ ਚੁੱਕੇ ਹਨ",
+      "reauth_entry_missing": "ਇਹ BC Hydro ਐਂਟਰੀ ਹੁਣ ਮੌਜੂਦ ਨਹੀਂ ਹੈ, ਇਸ ਲਈ ਦੁਬਾਰਾ ਪ੍ਰਮਾਣਿਤ ਕਰਨ ਲਈ ਕੁਝ ਨਹੀਂ ਹੈ।"
     }
   },
   "options": {

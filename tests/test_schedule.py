@@ -227,3 +227,19 @@ def test_loading_garbage_is_harmless() -> None:
     tracker.load({"arrivals": [{"day": "nope"}], "last_check": "bad"})
     tracker.load(None)
     assert tracker.arrivals == []
+
+
+def test_readings_without_a_time_zone_are_ignored() -> None:
+    hourly = [
+        {"date_time": "2026-11-08T05:00:01", "quality": "ACTUAL"},  # no offset
+        {"date_time": "2026-11-07T22:00:01-08:00", "quality": "ACTUAL"},
+    ]
+    assert newest_actual_reading(hourly) == datetime.fromisoformat("2026-11-07T22:00:01-08:00")
+
+
+def test_untimed_arrival_is_estimated_at_its_sighting() -> None:
+    from custom_components.bchydro.schedule import Arrival
+
+    seen = at(9, 8)
+    assert Arrival(seen.date(), seen, None).estimate == seen
+    assert Arrival(seen.date(), seen, at(8, 8)).estimate == seen  # previous check a day ago

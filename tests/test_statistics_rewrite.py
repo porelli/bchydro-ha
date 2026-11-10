@@ -121,3 +121,44 @@ def test_hours_before_the_window_are_ignored() -> None:
 
     assert [r["start"] for r in energy] == [utc(5, 8)]
     assert energy[0]["sum"] == pytest.approx(10.1)
+
+
+def test_malformed_entries_are_skipped_or_costed_at_zero() -> None:
+    window = utc(5, 8)
+    current = [
+        bch("not a timestamp", 1.0),
+        {"date_time": "2026-11-05T00:00:01-08:00", "value": 0.2, "cost": "n/a", "quality": "ACTUAL"},
+    ]
+
+    energy, cost, changed = _merge_window(current, window, {}, {}, 0.0, 0.0)
+
+    assert changed
+    assert [r["state"] for r in energy] == [0.2]
+    assert [r["state"] for r in cost] == [0.0]
+
+
+async def test_window_continues_from_the_hour_before_it(hass) -> None:
+    """The running total resumes from the last row recorded before the window."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from custom_components.bchydro.statistics import (
+        LEGACY_STATISTICS,
+        _get_stored_window,
+    )
+
+    def row(start: datetime, state: float, total: float) -> dict:
+        return {"start": start.timestamp(), "state": state, "sum": total}
+
+    rows = {
+        LEGACY_STATISTICS.energy_id: [row(utc(5, 6), 0.1, 9.9), row(utc(5, 7), 0.1, 10.0), row(utc(5, 8), 0.2, 10.2)],
+        LEGACY_STATISTICS.cost_id: [row(utc(5, 7), 0.01, 1.0), row(utc(5, 8), 0.02, 1.02)],
+    }
+    recorder = MagicMock()
+    recorder.async_add_executor_job = AsyncMock(return_value=rows)
+    with patch("custom_components.bchydro.statistics.get_instance", return_value=recorder):
+        energy, cost, energy_base, cost_base = await _get_stored_window(
+            hass, LEGACY_STATISTICS, utc(5, 8)
+        )
+
+    assert (energy_base, cost_base) == (10.0, 1.0)
+    assert list(energy) == [utc(5, 8)] and list(cost) == [utc(5, 8)]

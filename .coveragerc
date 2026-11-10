@@ -1,0 +1,16 @@
+# Coverage settings for the BC Hydro integration.
+#
+# Every line and every branch of custom_components/bchydro is exercised by the
+# test suite, and this keeps it that way: a run that measures less than 100%
+# fails (CI, the pre-push hook in .githooks, or a local
+# `pytest --cov=custom_components/bchydro`). Code that cannot be reached should
+# be removed rather than excluded.
+
+[run]
+branch = True
+source = custom_components/bchydro
+
+[report]
+fail_under = 100
+show_missing = True
+skip_covered = True

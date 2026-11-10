@@ -24,6 +24,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run tests with coverage
+        # .coveragerc measures branches too and fails the run below 100%
         run: |
           pytest tests/ --cov=custom_components/bchydro --cov-report=xml --cov-report=term-missing
 

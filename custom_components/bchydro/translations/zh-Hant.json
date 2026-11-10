@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "此帳戶已設定",
       "reauth_successful": "重新驗證成功",
-      "all_accounts_configured": "此 BC Hydro 登入帳號下的所有帳戶均已設定"
+      "all_accounts_configured": "此 BC Hydro 登入帳號下的所有帳戶均已設定",
+      "reauth_entry_missing": "此 BC Hydro 項目已不存在，無需重新驗證。"
     }
   },
   "options": {

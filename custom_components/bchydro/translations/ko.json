@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "이 계정은 이미 구성되어 있습니다",
       "reauth_successful": "재인증 성공",
-      "all_accounts_configured": "이 BC Hydro 로그인의 모든 계정이 이미 설정되어 있습니다"
+      "all_accounts_configured": "이 BC Hydro 로그인의 모든 계정이 이미 설정되어 있습니다",
+      "reauth_entry_missing": "이 BC Hydro 항목이 더 이상 없으므로 다시 인증할 대상이 없습니다."
     }
   },
   "options": {

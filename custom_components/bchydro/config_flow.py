@@ -252,7 +252,11 @@ class BCHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not self._async_current_entries():
             return ""
 
-        slug = slugify(name) or slugify(self._account_number(account_id)) or "account"
+        slug = (
+            slugify(name)
+            or slugify(self._account_number(self._find_account(account_id)))
+            or "account"
+        )
         taken = {
             entry.data.get(CONF_STATISTIC_SUFFIX)
             for entry in self._async_current_entries()
@@ -261,22 +265,22 @@ class BCHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return None
         return slug
 
-    def _account_number(self, account: dict[str, Any] | str) -> str:
+    def _find_account(self, account_id: str) -> dict[str, Any]:
+        """The listed account with this id ({} if unknown)."""
+        return next(
+            (a for a in self._accounts if str(a.get("accountId")) == account_id), {}
+        )
+
+    @staticmethod
+    def _account_number(account: dict[str, Any]) -> str:
         """Return an account's number without its leading zeros."""
-        if isinstance(account, str):
-            account = next(
-                (a for a in self._accounts if str(a.get("accountId")) == account), {}
-            )
         return str(account.get("accountNumber", "")).lstrip("0")
 
     def _account_label(self, account_id: str) -> str:
         """Describe an account the way the BC Hydro account picker does."""
-        for account in self._accounts:
-            if str(account.get("accountId")) == account_id:
-                description = account.get("accountDesc") or ""
-                number = self._account_number(account)
-                return f"{number} - {description}".strip(" -") or account_id
-        return account_id
+        account = self._find_account(account_id)
+        description = account.get("accountDesc") or ""
+        return f"{self._account_number(account)} - {description}".strip(" -") or account_id
 
     async def async_step_reauth(
         self, entry_data: dict[str, Any]
@@ -285,9 +289,11 @@ class BCHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
-        if self._reauth_entry:
-            self._username = self._reauth_entry.data[CONF_USERNAME]
-            self._password = self._reauth_entry.data.get(CONF_PASSWORD)
+        if self._reauth_entry is None:
+            # Removed while the request was pending: nothing to update
+            return self.async_abort(reason="reauth_entry_missing")
+        self._username = self._reauth_entry.data[CONF_USERNAME]
+        self._password = self._reauth_entry.data.get(CONF_PASSWORD)
 
         return await self.async_step_reauth_confirm()
 
@@ -296,16 +302,14 @@ class BCHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle reauth confirmation."""
         errors: dict[str, str] = {}
+        entry = self._reauth_entry
+        assert entry is not None  # async_step_reauth aborts without one
 
         if user_input is not None:
             self._username = user_input.get(CONF_USERNAME, self._username)
             self._password = user_input[CONF_PASSWORD]
 
-            account_id = (
-                self._reauth_entry.data.get(CONF_ACCOUNT_ID)
-                if self._reauth_entry
-                else None
-            )
+            account_id = entry.data.get(CONF_ACCOUNT_ID)
 
             try:
                 info = await validate_auth(
@@ -317,23 +321,17 @@ class BCHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                 )
 
-                if self._reauth_entry:
-                    data = {
-                        CONF_USERNAME: self._username,
-                        CONF_PASSWORD: self._password,
-                        "cookies": info["cookies"],
-                    }
-                    if account_id:
-                        # Keep following the account the user originally picked
-                        data[CONF_ACCOUNT_ID] = account_id
-                    self.hass.config_entries.async_update_entry(
-                        self._reauth_entry,
-                        data=data,
-                    )
-                    await self.hass.config_entries.async_reload(
-                        self._reauth_entry.entry_id
-                    )
-                    return self.async_abort(reason="reauth_successful")
+                data = {
+                    CONF_USERNAME: self._username,
+                    CONF_PASSWORD: self._password,
+                    "cookies": info["cookies"],
+                }
+                if account_id:
+                    # Keep following the account the user originally picked
+                    data[CONF_ACCOUNT_ID] = account_id
+                self.hass.config_entries.async_update_entry(entry, data=data)
+                await self.hass.config_entries.async_reload(entry.entry_id)
+                return self.async_abort(reason="reauth_successful")
 
             except BCHydroAuthError:
                 errors["base"] = "invalid_auth"

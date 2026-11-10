@@ -39,7 +39,8 @@
     "abort": {
       "already_configured": "Naka-configure na ang account na ito",
       "reauth_successful": "Matagumpay ang muling pag-authenticate",
-      "all_accounts_configured": "Naka-set up na ang lahat ng account ng BC Hydro login na ito"
+      "all_accounts_configured": "Naka-set up na ang lahat ng account ng BC Hydro login na ito",
+      "reauth_entry_missing": "Wala na ang entry na ito ng BC Hydro, kaya walang kailangang i-authenticate ulit."
     }
   },
   "options": {

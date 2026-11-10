@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Refuse to push if the test suite fails or coverage drops below 100%
+# (line and branch, see .coveragerc). CI enforces the same; this catches it
+# before the push.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Skip in an emergency:    git push --no-verify
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+python="${PYTHON:-}"
+if [ -z "$python" ] && [ -x .venv/bin/python ]; then python=.venv/bin/python; fi
+python="${python:-python3}"
+
+if ! "$python" -c "import pytest, pytest_cov, pytest_homeassistant_custom_component" 2>/dev/null; then
+    echo "pre-push: '$python' has no test dependencies." >&2
+    echo "  Create them with:  python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt" >&2
+    echo "  or point PYTHON at an interpreter that has them." >&2
+    exit 1
+fi
+
+echo "pre-push: running tests with the 100% coverage gate..."
+if ! "$python" -m pytest -q -p no:cacheprovider tests/ --cov=custom_components/bchydro --cov-report=term-missing; then
+    echo "pre-push: tests failed or coverage dropped below 100% - push refused." >&2
+    exit 1
+fi

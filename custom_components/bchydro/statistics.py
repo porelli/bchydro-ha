@@ -634,25 +634,22 @@ async def async_import_statistics(
                 )
             )
 
-        # Import statistics
-        if stats_energy or stats_cost:
+        # Import statistics. Energy and cost rows come from the same readings, so
+        # they are always both present or both empty.
+        if stats_energy:
             metadata_energy, metadata_cost = _build_statistics_metadata(stats)
-
-            if stats_energy:
-                _LOGGER.info(
-                    "Importing %d energy statistics (cumulative: %.2f kWh)",
-                    len(stats_energy),
-                    final_energy,
-                )
-                async_add_external_statistics(hass, metadata_energy, stats_energy)
-
-            if stats_cost:
-                _LOGGER.info(
-                    "Importing %d cost statistics (cumulative: $%.2f)",
-                    len(stats_cost),
-                    final_cost,
-                )
-                async_add_external_statistics(hass, metadata_cost, stats_cost)
+            _LOGGER.info(
+                "Importing %d energy statistics (cumulative: %.2f kWh)",
+                len(stats_energy),
+                final_energy,
+            )
+            async_add_external_statistics(hass, metadata_energy, stats_energy)
+            _LOGGER.info(
+                "Importing %d cost statistics (cumulative: $%.2f)",
+                len(stats_cost),
+                final_cost,
+            )
+            async_add_external_statistics(hass, metadata_cost, stats_cost)
         else:
             _LOGGER.debug(
                 "No new statistics to import: conversion returned empty (all records already recorded or filtered)"
