@@ -37,6 +37,7 @@ from .const import (
     ATTR_RATE_CATEGORY,
     ATTR_RATE_GROUP,
     DOMAIN,
+    MIN_HOURS_IN_DAY,
     PARALLEL_UPDATES,
     SENSOR_BILLING_PERCENTAGE,
     SENSOR_DATA_ARRIVAL_TIME,
@@ -93,9 +94,11 @@ def get_yesterday_data(data: dict[str, Any]) -> dict[str, Any] | None:
     if not daily_data:
         return None
 
-    # Find yesterday's data (last ACTUAL quality entry)
+    # The latest complete day: a trailing partial day (a single hour showed as
+    # 1.68 kWh for a 63 kWh home, issue #6) is not yesterday. Entries cached by
+    # older versions have no hour count and are taken as complete.
     for entry in reversed(daily_data):
-        if entry.get("quality") == "ACTUAL":
+        if entry.get("quality") == "ACTUAL" and entry.get("hours", 24) >= MIN_HOURS_IN_DAY:
             return entry
 
     return None

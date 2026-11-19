@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import logging
 from typing import Any
 
@@ -18,6 +19,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import BCHydroApiClient, BCHydroApiError, BCHydroAuthError
 from .const import (
+    BC_TIME_ZONE,
     CONF_DAILY_CHECK_TIME,
     CONF_DAILY_RETRY,
     CONF_UPDATE_INTERVAL,
@@ -126,6 +128,12 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
         self.consecutive_auth_failures = 0
         self.failing_since: datetime | None = None
         self.next_check: datetime | None = None
+        # Daily breakdown from the last successful fetch, reused when a fetch
+        # fails so "yesterday" does not blank out for a retry interval
+        self._last_consumption: dict[str, Any] = {}
+        # Set when a check got the profile but not everything else; the daily
+        # schedule then retries instead of waiting for tomorrow
+        self._check_incomplete = False
         self.arrivals = ArrivalTracker()
         self._arrivals_store: Store[dict[str, Any]] = Store(
             hass, ARRIVALS_STORAGE_VERSION, arrivals_storage_key(entry.entry_id)
@@ -147,6 +155,7 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
             List of daily consumption records with the same format as BC Hydro's daily API
         """
         daily_totals: dict[str, dict[str, float | datetime | None]] = {}
+        hours_per_day: dict[str, int] = {}
 
         for hour in hourly_data:
             try:
@@ -159,11 +168,13 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
                 if not timestamp_str:
                     continue
 
-                # Days follow BC's clock (Home Assistant's time zone), not the
-                # offset on BC Hydro's label: since November 2026 BC stays on
-                # UTC-7 while BC Hydro still writes -08:00, so its days run
-                # 23:00-08:00 to 23:00-08:00 and the label's date splits them.
-                timestamp = dt_util.as_local(datetime.fromisoformat(timestamp_str))
+                # Days follow BC's clock, not the offset on BC Hydro's label
+                # (it wrote -08:00 for a while after BC stayed on UTC-7) nor
+                # Home Assistant's time zone: on Central time a BC day split
+                # in two and "yesterday" showed its last hour (issue #6).
+                timestamp = datetime.fromisoformat(timestamp_str).astimezone(
+                    ZoneInfo(BC_TIME_ZONE)
+                )
                 date_key = timestamp.date().isoformat()
 
                 # Sum up consumption and cost for this date
@@ -172,6 +183,7 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
 
                 if date_key not in daily_totals:
                     daily_totals[date_key] = {"consumption": 0.0, "cost": 0.0, "date": None}
+                hours_per_day[date_key] = hours_per_day.get(date_key, 0) + 1
 
                 prev_consumption = daily_totals[date_key]["consumption"]
                 prev_cost = daily_totals[date_key]["cost"]
@@ -196,6 +208,9 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
                 "cost": data["cost"],
                 "quality": "ACTUAL",  # Calculated from actual hourly data
                 "type": "daily",
+                # How many hourly readings make up the day: the newest day can
+                # be partial, which "yesterday" must not report
+                "hours": hours_per_day[date_key],
             })
 
         _LOGGER.debug("Calculated %d daily records from %d hourly records",
@@ -236,9 +251,13 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
         newest = newest_actual_reading(
             (data.get("consumption") or {}).get("hourly_consumption")
         )
-        self.arrivals.observe(now, newest)
-        self._arrivals_store.async_delay_save(self.arrivals.as_dict, 10)
-        self._plan_next_check(now, has_latest_batch(newest, now))
+        if not self._check_incomplete:
+            # Only a fully successful check says anything about arrivals
+            self.arrivals.observe(now, newest)
+            self._arrivals_store.async_delay_save(self.arrivals.as_dict, 10)
+        self._plan_next_check(
+            now, has_latest_batch(newest, now) and not self._check_incomplete
+        )
         summary = summarize(self.arrivals.arrivals, now.tzinfo)
         data["arrival"] = {
             "state": summary.state,
@@ -320,6 +339,7 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
 
     async def _fetch_data(self) -> dict[str, Any]:
         """Fetch data from BC Hydro."""
+        self._check_incomplete = False
         try:
             # Get account profile data
             profile_data = await self.client.get_account_profile()
@@ -352,10 +372,13 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
                         hourly_data["hourly_consumption"]
                     )
                     consumption_data["daily_consumption"] = daily_consumption
+                    self._last_consumption = consumption_data
 
             except Exception as consumption_err:
                 _LOGGER.warning("Failed to get consumption data: %s", consumption_err)
-                    # Continue with just profile data
+                # Keep showing the last good days; check again soon
+                consumption_data = self._last_consumption
+                self._check_incomplete = True
 
             _LOGGER.debug("Successfully fetched BC Hydro data")
 
@@ -389,6 +412,8 @@ class BCHydroDataUpdateCoordinator(TimestampDataUpdateCoordinator):
                 _LOGGER.debug("Statistics import completed successfully")
             except Exception as stats_err:
                 _LOGGER.warning("Failed to import statistics: %s", stats_err)
+                # The Energy dashboard did not get the new day: check again soon
+                self._check_incomplete = True
 
             self.consecutive_auth_failures = 0
 

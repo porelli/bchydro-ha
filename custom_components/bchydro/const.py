@@ -20,6 +20,12 @@ GLOBAL_DATA_URL = f"{BASE_URL}/evportlet/web/global-data.html"
 CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 
+# BC Hydro's days follow BC's clock, whatever time zone Home Assistant runs in
+BC_TIME_ZONE = "America/Vancouver"
+# A day with at least this many hours of readings is complete (23 allows a
+# spring-forward day, should BC ever change clocks again)
+MIN_HOURS_IN_DAY = 23
+
 # Update schedule. "daily" checks from a time of day until that day's data
 # arrives; "interval" polls every update_interval minutes.
 CONF_UPDATE_MODE = "update_mode"

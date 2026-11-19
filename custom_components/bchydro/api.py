@@ -26,6 +26,9 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = ClientTimeout(total=30)
+# BC Hydro answers consumption requests in about a second, except while it
+# publishes the day's data (~8:00 BC), when they took 25-90 s
+CONSUMPTION_TIMEOUT = ClientTimeout(total=120)
 
 # Global rate limiting state (persists across all API client instances)
 # This prevents runaway auth attempts during error loops/reloads
@@ -756,6 +759,7 @@ class BCHydroApiClient:
                 CONSUMPTION_DATA_URL,
                 data=post_data,
                 headers=headers,
+                timeout=CONSUMPTION_TIMEOUT,
             ) as response:
                 if response.status in (401, 403):
                     return None

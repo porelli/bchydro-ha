@@ -7,9 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-18
+
 ### Fixed
+- "Yesterday consumption" could show a single hour instead of the whole day
+  (1.68 kWh for a home using about 63 kWh a day, #6). Since 0.2.1 days were
+  grouped in Home Assistant's time zone; with Home Assistant set to a zone east
+  of BC, BC Hydro's last hour formed a day of its own. Days now always follow BC
+  time, and "yesterday" is the latest complete day.
+- The morning check now retries when BC Hydro is slow. While it publishes the
+  day's data (around 8:00 BC) requests took 25-90 s and some timed out; the
+  check was then treated as done, so that day was missing from the Energy
+  dashboard until the next morning. Consumption requests now get 120 s, and a
+  check whose data or statistics did not come through is retried at the
+  configured retry interval.
+- A failed fetch no longer blanks "yesterday" until the retry: the last good
+  daily figures are kept.
 - Re-authenticating an entry that was removed in the meantime now stops with a
   message; it used to accept the password and show the same form again.
+
+### Added
+- The diagnostics download now includes the Home Assistant and BC time zones,
+  the update schedule state, the newest days with their hour counts and BC
+  Hydro's newest hourly labels, so a report like #6 can be checked from one
+  file. Personal details stay redacted.
 
 ### Changed
 - The test suite covers every line and branch of the integration, and CI plus
